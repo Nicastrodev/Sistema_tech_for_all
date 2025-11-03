@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atividades - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge">Professor</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen">
+        <div class="form-container">
+          <div class="card">
+            <div class="card-header">
+              <h3>Gerenciar Atividades</h3>
+              <p>Crie e publique novas atividades</p>
+            </div>
+            <form class="form" onsubmit="publishActivity(event)">
+              <div class="form-group">
+                <label for="actTitle">Título da atividade</label>
+                <input
+                  type="text"
+                  id="actTitle"
+                  placeholder="Ex: Exercício de Matemática 1"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="actDesc">Descrição</label>
+                <textarea
+                  id="actDesc"
+                  rows="4"
+                  placeholder="Descreva a atividade"
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <label for="actDue">Prazo de entrega</label>
+                <input type="date" id="actDue" required />
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                  Publicar Atividade
+                </button>
+                <button
+                  type="button"
+                  class="btn-outline"
+                  onclick="window.location.href='dashboard-teacher.html'"
+                >
+                  Voltar
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card" style="margin-top: 24px">
+            <div class="card-header">
+              <h3>Entregas Recentes</h3>
+            </div>
+            <div class="submission-list">
+              <div class="submission-item">
+                <div class="submission-info">
+                  <h4>Ana Silva</h4>
+                  <p>Arquivo.pdf • Enviado hoje às 14:30</p>
+                </div>
+                <div class="submission-actions">
+                  <button class="btn-outline-small">Baixar</button>
+                  <button class="btn-primary-small" onclick="autoGrade()">
+                    Corrigir com IA
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const actDueInput = document.getElementById("actDue");
+        if (actDueInput) {
+          const today = new Date().toISOString().split("T")[0];
+          actDueInput.min = today;
+        }
+      });
+
+      function publishActivity(event) {
+        event.preventDefault();
+
+        const actTitle = document.getElementById("actTitle").value;
+        const actDesc = document.getElementById("actDesc").value;
+        const actDue = document.getElementById("actDue").value;
+
+        if (!actTitle || !actDue) {
+          alert("Por favor, preencha o título e o prazo da atividade.");
+          return;
+        }
+
+        setTimeout(() => {
+          alert(
+            `✓ Atividade "${actTitle}" publicada com sucesso!\n\nPrazo de entrega: ${formatDate(
+              actDue
+            )}`
+          );
+
+          document.getElementById("actTitle").value = "";
+          document.getElementById("actDesc").value = "";
+          document.getElementById("actDue").value = "";
+        }, 500);
+      }
+
+      function autoGrade() {
+        const grades = ["8.5", "9.0", "7.5", "9.5", "8.0"];
+        const randomGrade = grades[Math.floor(Math.random() * grades.length)];
+
+        setTimeout(() => {
+          alert(
+            `✓ Correção automática concluída!\n\nNota sugerida pela IA: ${randomGrade}\n\n(Esta é uma simulação. A correção real pode levar em conta vários critérios)`
+          );
+        }, 1000);
+      }
+    </script>
+  </body>
+</html>

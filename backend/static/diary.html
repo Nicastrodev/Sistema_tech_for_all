@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diário de Aula - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge">Professor</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen">
+        <div class="form-container">
+          <div class="card">
+            <div class="card-header">
+              <h3>Diário de Aula</h3>
+              <p>Registre o conteúdo da aula</p>
+            </div>
+            <form class="form" onsubmit="saveDiary(event)">
+              <div class="form-group">
+                <label for="diaryClass">Turma</label>
+                <select id="diaryClass">
+                  <option>7º A</option>
+                  <option>8º B</option>
+                  <option>9º C</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="diaryDate">Data</label>
+                <input type="date" id="diaryDate" required />
+              </div>
+              <div class="form-group">
+                <label for="diaryContent">Conteúdo da aula</label>
+                <textarea
+                  id="diaryContent"
+                  rows="6"
+                  placeholder="Descreva o conteúdo abordado na aula"
+                  required
+                ></textarea>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Salvar Aula</button>
+                <button
+                  type="button"
+                  class="btn-outline"
+                  onclick="suggestWithAI()"
+                >
+                  Sugestão com IA
+                </button>
+              </div>
+              <div id="diaryMsg" class="success-message"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+    <script>
+      // Define data atual
+      document.addEventListener("DOMContentLoaded", function () {
+        const diaryDateInput = document.getElementById("diaryDate");
+        if (diaryDateInput) {
+          const today = new Date().toISOString().split("T")[0];
+          diaryDateInput.value = today;
+        }
+      });
+
+      function saveDiary(event) {
+        event.preventDefault();
+
+        const diaryClass = document.getElementById("diaryClass").value;
+        const diaryDate = document.getElementById("diaryDate").value;
+        const diaryContent = document.getElementById("diaryContent").value;
+
+        if (!diaryDate || !diaryContent) {
+          alert("Por favor, preencha todos os campos obrigatórios.");
+          return;
+        }
+
+        const diaryMsg = document.getElementById("diaryMsg");
+        diaryMsg.textContent = `✓ Aula registrada com sucesso para a turma ${diaryClass} em ${formatDate(
+          diaryDate
+        )}`;
+        diaryMsg.classList.add("show");
+
+        setTimeout(() => {
+          diaryMsg.classList.remove("show");
+        }, 5000);
+
+        document.getElementById("diaryContent").value = "";
+      }
+
+      function suggestWithAI() {
+        const diaryContent = document.getElementById("diaryContent");
+        const suggestions = [
+          "Sugestão IA: Revisar os conceitos principais da aula anterior, propor exercícios práticos em grupo e finalizar com um resumo colaborativo.",
+          "Sugestão IA: Introduzir o tema com exemplos do cotidiano, desenvolver atividade hands-on e avaliar com quiz interativo.",
+          "Sugestão IA: Discussão em grupo sobre o tema, apresentação de casos práticos, exercícios individuais e feedback coletivo.",
+          "Sugestão IA: Aula expositiva dialogada, resolução de problemas em duplas, correção colaborativa e sistematização do conteúdo.",
+        ];
+
+        const randomSuggestion =
+          suggestions[Math.floor(Math.random() * suggestions.length)];
+
+        diaryContent.value = "";
+        let i = 0;
+        const typingEffect = setInterval(() => {
+          if (i < randomSuggestion.length) {
+            diaryContent.value += randomSuggestion.charAt(i);
+            i++;
+          } else {
+            clearInterval(typingEffect);
+          }
+        }, 20);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minhas Atividades - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge">Aluno</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen">
+        <div class="form-container">
+          <div class="card">
+            <div class="card-header">
+              <h3>Minhas Atividades</h3>
+              <p>Visualize e envie suas atividades</p>
+            </div>
+            <div class="activity-list">
+              <div class="activity-item">
+                <div class="activity-info">
+                  <h4>Expressões Numéricas</h4>
+                  <p class="activity-due">Prazo: 27/10/2025</p>
+                </div>
+                <div class="activity-upload">
+                  <input type="file" id="uploadFile" class="file-input" />
+                  <button class="btn-primary-small" onclick="sendActivity()">
+                    Enviar
+                  </button>
+                  <button class="btn-outline-small" onclick="reviewWithAI()">
+                    Revisar com IA
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+    <script>
+      function sendActivity() {
+        const fileInput = document.getElementById("uploadFile");
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+          alert("Por favor, selecione um arquivo para enviar.");
+          return;
+        }
+
+        const fileName = fileInput.files[0].name;
+
+        setTimeout(() => {
+          alert(
+            `✓ Arquivo "${fileName}" enviado com sucesso!\n\nSeu professor será notificado.`
+          );
+          fileInput.value = "";
+        }, 1000);
+      }
+
+      function reviewWithAI() {
+        const tips = [
+          "Dica IA: Revise sua ortografia e gramática antes de enviar.\n\n✓ Verifique pontuação\n✓ Confira acentuação\n✓ Releia o texto em voz alta",
+          "Dica IA: Sua resposta está bem estruturada! Considere adicionar mais exemplos práticos.\n\n✓ Introdução clara\n✓ Desenvolvimento coerente\n✓ Conclusão objetiva",
+          "Dica IA: Ótimo trabalho! Algumas sugestões:\n\n✓ Expanda o segundo parágrafo\n✓ Adicione referências bibliográficas\n✓ Revise os cálculos matemáticos",
+          "Dica IA: Seu texto está claro e objetivo!\n\n✓ Linguagem adequada\n✓ Argumentação consistente\n✓ Boa apresentação visual",
+        ];
+
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
+        alert(randomTip);
+      }
+    </script>
+  </body>
+</html>

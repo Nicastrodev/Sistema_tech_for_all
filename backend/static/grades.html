@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notas - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge">Aluno</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen">
+        <div class="form-container">
+          <div class="card">
+            <div class="card-header">
+              <h3>Minhas Notas</h3>
+              <p>Acompanhe seu desempenho</p>
+            </div>
+            <table class="grades-table">
+              <thead>
+                <tr>
+                  <th>Atividade</th>
+                  <th>Nota</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Atividade 1</td>
+                  <td><span class="grade-value">8.5</span></td>
+                  <td><span class="status-badge approved">Aprovado</span></td>
+                </tr>
+                <tr>
+                  <td>Atividade 2</td>
+                  <td><span class="grade-value">9.0</span></td>
+                  <td><span class="status-badge approved">Aprovado</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+  </body>
+</html>

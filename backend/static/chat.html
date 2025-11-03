@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat IA - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge" id="currentRole">Visitante</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen">
+        <div class="form-container">
+          <div class="card">
+            <div class="card-header">
+              <h3>Chat IA - Assistente Virtual</h3>
+              <p>Tire suas dúvidas com nosso assistente inteligente</p>
+            </div>
+            <div class="chat-container">
+              <div id="chatWindow" class="chat-window"></div>
+              <div class="chat-input-container">
+                <input
+                  type="text"
+                  id="chatInput"
+                  placeholder="Digite sua mensagem..."
+                  class="chat-input"
+                />
+                <button class="btn-primary" onclick="sendChat()">Enviar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+    <script>
+      // Atualiza badge de função
+      document.addEventListener("DOMContentLoaded", function () {
+        const role = sessionStorage.getItem("tf_role");
+        const roleBadge = document.getElementById("currentRole");
+
+        if (role === "teacher") {
+          roleBadge.textContent = "Professor";
+        } else if (role === "student") {
+          roleBadge.textContent = "Aluno";
+        } else {
+          roleBadge.textContent = "Visitante";
+        }
+
+        // Mensagem de boas-vindas
+        const chatWindow = document.getElementById("chatWindow");
+        if (chatWindow && chatWindow.children.length === 0) {
+          const welcomeMessage = document.createElement("div");
+          welcomeMessage.className = "chat-message";
+          welcomeMessage.innerHTML =
+            "<strong>Assistente IA:</strong> Olá! 👋 Sou seu assistente virtual. Como posso ajudar você hoje?";
+          chatWindow.appendChild(welcomeMessage);
+        }
+
+        // Enter para enviar
+        const chatInput = document.getElementById("chatInput");
+        if (chatInput) {
+          chatInput.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+              sendChat();
+            }
+          });
+        }
+      });
+
+      function sendChat() {
+        const chatInput = document.getElementById("chatInput");
+        const chatWindow = document.getElementById("chatWindow");
+        const message = chatInput.value.trim();
+
+        if (!message) {
+          return;
+        }
+
+        // Adiciona mensagem do usuário
+        const userMessage = document.createElement("div");
+        userMessage.className = "chat-message";
+        userMessage.innerHTML = `<strong>Você:</strong> ${escapeHtml(message)}`;
+        chatWindow.appendChild(userMessage);
+
+        chatInput.value = "";
+
+        // Indicador de digitação
+        const typingIndicator = document.createElement("div");
+        typingIndicator.className = "chat-message";
+        typingIndicator.innerHTML =
+          "<strong>Assistente IA:</strong> <em>Digitando...</em>";
+        chatWindow.appendChild(typingIndicator);
+
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        // Simula resposta
+        setTimeout(() => {
+          typingIndicator.remove();
+
+          const aiMessage = document.createElement("div");
+          aiMessage.className = "chat-message";
+          aiMessage.innerHTML = `<strong>Assistente IA:</strong> ${generateAIResponse(
+            message
+          )}`;
+          chatWindow.appendChild(aiMessage);
+
+          chatWindow.scrollTop = chatWindow.scrollHeight;
+        }, 1500);
+      }
+
+      function generateAIResponse(userMessage) {
+        const lowerMessage = userMessage.toLowerCase();
+
+        if (lowerMessage.includes("ajuda") || lowerMessage.includes("ajudar")) {
+          return "Olá! Estou aqui para ajudar. Você pode me perguntar sobre:\n• Como usar o sistema\n• Tirar dúvidas sobre atividades\n• Sugestões de estudo\n• Recursos disponíveis";
+        }
+
+        if (
+          lowerMessage.includes("atividade") ||
+          lowerMessage.includes("tarefa")
+        ) {
+          return 'Para gerenciar suas atividades, acesse o menu "Atividades". Lá você pode visualizar prazos, enviar arquivos e receber feedback. Precisa de ajuda com alguma atividade específica?';
+        }
+
+        if (lowerMessage.includes("nota") || lowerMessage.includes("notas")) {
+          return 'Você pode acompanhar suas notas na seção "Notas" do menu. As notas são atualizadas automaticamente após a correção das atividades pelos professores.';
+        }
+
+        if (
+          lowerMessage.includes("prazo") ||
+          lowerMessage.includes("entrega")
+        ) {
+          return "Os prazos de entrega estão disponíveis em cada atividade. Recomendo organizá-los em um calendário pessoal. Quer que eu te ajude a priorizar suas tarefas?";
+        }
+
+        if (
+          lowerMessage.includes("professor") ||
+          lowerMessage.includes("professora")
+        ) {
+          return "Você pode entrar em contato com seus professores através das turmas ou enviando mensagens diretas. Eles costumam responder em até 24 horas.";
+        }
+
+        const genericResponses = [
+          "Interessante questão! Pode me dar mais detalhes para eu poder ajudar melhor?",
+          "Entendo sua dúvida. Que tal explorarmos isso juntos? Me conte mais sobre o que você precisa.",
+          "Ótima pergunta! Para te dar a melhor resposta, preciso entender melhor seu contexto. Pode elaborar?",
+          "Posso ajudar com isso! Vamos por partes: o que especificamente você gostaria de saber?",
+        ];
+
+        return genericResponses[
+          Math.floor(Math.random() * genericResponses.length)
+        ];
+      }
+    </script>
+  </body>
+</html>

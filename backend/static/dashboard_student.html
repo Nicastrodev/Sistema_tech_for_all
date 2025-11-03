@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Aluno - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge" id="currentRole">Aluno</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen" id="dashboard-student">
+        <div class="dashboard-header">
+          <div>
+            <h2 id="welcomeNameStudent">Olá, Aluno 👋</h2>
+            <p class="subtitle">Bem-vindo(a) ao seu painel de estudos</p>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon orange">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                ></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Atividades Pendentes</p>
+              <h3 class="stat-value" id="pendingActivities">0</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                ></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Chat IA</p>
+              <h3 class="stat-value">Disponível</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path
+                  d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+                ></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Frequência</p>
+              <h3 class="stat-value" id="attendanceValue">0%</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <h3>Minhas Turmas</h3>
+              </div>
+              <div class="class-list" id="studentClassList">
+                <p style="color: var(--text-secondary); padding: 20px">
+                  Carregando turmas...
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="sidebar">
+            <div class="card">
+              <h3>Ações Rápidas</h3>
+              <nav class="sidebar-nav">
+                <a href="/activities_student.html" class="nav-item">
+                  <span class="nav-icon">📋</span>
+                  <span>Atividades</span>
+                </a>
+                <a href="/lessons.html" class="nav-item">
+                  <span class="nav-icon">📚</span>
+                  <span>Aulas</span>
+                </a>
+                <a href="/grades.html" class="nav-item">
+                  <span class="nav-icon">📈</span>
+                  <span>Notas</span>
+                </a>
+                <a href="/chat.html" class="nav-item">
+                  <span class="nav-icon">💬</span>
+                  <span>Chat IA</span>
+                </a>
+              </nav>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const s = getSession();
+        if (!s.user_id || s.role !== "student") {
+          window.location.href = "/";
+          return;
+        }
+
+        const listContainer = document.getElementById("studentClassList");
+        listContainer.innerHTML =
+          "<p style='color:var(--text-secondary);padding:20px;'>Carregando turmas...</p>";
+
+        try {
+          const res = await fetch(
+            `/api/turmas?userId=${s.user_id}&role=${s.role}`
+          );
+          const data = await res.json();
+
+          if (!data.success || !data.turmas.length) {
+            listContainer.innerHTML =
+              "<p style='color:var(--text-secondary);padding:20px;'>Você ainda não está em nenhuma turma.</p>";
+            return;
+          }
+
+          listContainer.innerHTML = "";
+          data.turmas.forEach((t) => {
+            const div = document.createElement("div");
+            div.className = "class-item";
+            div.innerHTML = `
+              <div class="class-info">
+                <h4>${escapeHtml(t.nome)}</h4>
+                <p>${escapeHtml(t.descricao || "Ver aulas • Atividades")}</p>
+              </div>
+              <button class="btn-outline-small" onclick="window.location.href='/turma.html?id=${
+                t.id
+              }'">
+                Abrir
+              </button>
+            `;
+            listContainer.appendChild(div);
+          });
+        } catch (err) {
+          console.error("Erro ao carregar turmas:", err);
+          listContainer.innerHTML =
+            "<p style='color:red;padding:20px;'>Erro ao carregar turmas.</p>";
+        }
+      });
+    </script>
+  </body>
+</html>

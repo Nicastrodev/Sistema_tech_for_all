@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalhes da Turma - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge">Professor</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+          <a href="#" id="dashboardLink" class="breadcrumb-link">Dashboard</a>
+          <span class="breadcrumb-separator">›</span>
+          <span class="breadcrumb-current" id="breadcrumbClassName"
+            >Carregando...</span
+          >
+        </div>
+
+        <div class="dashboard-header">
+          <div>
+            <h2 id="className">Carregando...</h2>
+            <p class="subtitle">
+              Gerencie sua turma e acompanhe o progresso dos alunos
+            </p>
+          </div>
+          <div class="header-buttons">
+            <button class="btn-primary" onclick="addStudent()">
+              <span class="icon">+</span> Adicionar Aluno
+            </button>
+            <button class="btn-outline" onclick="editClass()">
+              Editar Turma
+            </button>
+          </div>
+        </div>
+
+        <!-- Informações da Turma -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Total de Alunos</p>
+              <h3 class="stat-value" id="totalStudents">0</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Média Geral</p>
+              <h3 class="stat-value" id="averageGrade">0.0</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path
+                  d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+                ></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Frequência Média</p>
+              <h3 class="stat-value" id="averageAttendance">0%</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="main-content">
+            <!-- Informações Gerais -->
+            <div class="card" style="margin-bottom: 24px">
+              <div class="card-header">
+                <h3>Informações da Turma</h3>
+              </div>
+              <div class="class-info-grid">
+                <div class="info-item">
+                  <label class="info-label">Nome da Turma</label>
+                  <p class="info-value" id="classNameDetail">Carregando...</p>
+                </div>
+                <div class="info-item">
+                  <label class="info-label">Código de Acesso</label>
+                  <div class="code-display">
+                    <span class="info-value code-value" id="classCode"
+                      >------</span
+                    >
+                    <button
+                      class="btn-copy"
+                      onclick="copyCode()"
+                      title="Copiar código"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <rect
+                          x="9"
+                          y="9"
+                          width="13"
+                          height="13"
+                          rx="2"
+                          ry="2"
+                        ></rect>
+                        <path
+                          d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="info-item full-width">
+                  <label class="info-label">Descrição</label>
+                  <p class="info-value" id="classDescription">Carregando...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lista de Alunos -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Alunos Inscritos</h3>
+                <p>Lista completa de alunos matriculados na turma</p>
+              </div>
+
+              <!-- Busca -->
+              <div class="search-box">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <input
+                  type="text"
+                  id="searchStudent"
+                  placeholder="Buscar aluno por nome..."
+                  onkeyup="filterStudents()"
+                />
+              </div>
+
+              <!-- Tabela de Alunos -->
+              <div class="students-table-container">
+                <table class="students-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Email</th>
+                      <th>Frequência</th>
+                      <th>Média</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="studentsTableBody">
+                    <!-- Linha de carregamento -->
+                    <tr class="loading-row">
+                      <td colspan="5" style="text-align: center; padding: 40px">
+                        <p style="color: var(--text-secondary)">
+                          Carregando alunos...
+                        </p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <aside class="sidebar">
+            <div class="card">
+              <h3>Ações Rápidas</h3>
+              <nav class="sidebar-nav">
+                <a href="diary.html" class="nav-item">
+                  <span class="nav-icon">📝</span>
+                  <span>Registrar Aula</span>
+                </a>
+                <a href="activities_teacher.html" class="nav-item">
+                  <span class="nav-icon">📋</span>
+                  <span>Nova Atividade</span>
+                </a>
+                <a
+                  href="#"
+                  onclick="generateReport(); return false;"
+                  class="nav-item"
+                >
+                  <span class="nav-icon">📊</span>
+                  <span>Gerar Relatório</span>
+                </a>
+                <a
+                  href="#"
+                  onclick="exportStudents(); return false;"
+                  class="nav-item"
+                >
+                  <span class="nav-icon">📥</span>
+                  <span>Exportar Lista</span>
+                </a>
+              </nav>
+            </div>
+
+            <div class="card" style="margin-top: 16px">
+              <h3>Estatísticas</h3>
+              <div class="stats-list">
+                <div class="stat-item">
+                  <span class="stat-item-label">Aprovados</span>
+                  <span class="stat-item-value success" id="approvedCount"
+                    >0</span
+                  >
+                </div>
+                <div class="stat-item">
+                  <span class="stat-item-label">Em recuperação</span>
+                  <span class="stat-item-value warning" id="recoveryCount"
+                    >0</span
+                  >
+                </div>
+                <div class="stat-item">
+                  <span class="stat-item-label">Reprovados</span>
+                  <span class="stat-item-value danger" id="failedCount">0</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+    
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const s = getSession();
+        const link = document.getElementById("dashboardLink");
+        if (s && s.role === "teacher") link.href = "/dashboard/teacher";
+        else if (s && s.role === "student") link.href = "/dashboard/student";
+        else link.href = "/";
+      });
+    </script>
+
+    <script src="/common.js"></script>
+    <script src="/turma.js"></script>
+  </body>
+</html>

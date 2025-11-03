@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Criar Turma - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge">Professor</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen">
+        <div class="form-container">
+          <div class="card">
+            <div class="card-header">
+              <h3>Criar Nova Turma</h3>
+              <p>Preencha os dados da nova turma</p>
+            </div>
+            <form class="form" onsubmit="saveClass(event)">
+              <div class="form-group">
+                <label for="className">Nome da turma</label>
+                <input
+                  type="text"
+                  id="className"
+                  placeholder="Ex: 7º A"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="classDesc">Descrição</label>
+                <textarea
+                  id="classDesc"
+                  rows="3"
+                  placeholder="Descrição breve da turma"
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <label for="classCode">Código de acesso</label>
+                <input
+                  type="text"
+                  id="classCode"
+                  placeholder="Código para alunos entrarem"
+                />
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Criar Turma</button>
+                <button
+                  type="button"
+                  class="btn-outline"
+                  onclick="window.location.href='dashboard-teacher.html'"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+    <script>
+      function saveClass(event) {
+        event.preventDefault();
+
+        const className = document.getElementById("className").value;
+        const classDesc = document.getElementById("classDesc").value;
+        const classCode = document.getElementById("classCode").value;
+
+        if (!className) {
+          alert("Por favor, preencha o nome da turma.");
+          return;
+        }
+
+        setTimeout(() => {
+          alert(
+            `Turma "${className}" criada com sucesso!\n\nCódigo de acesso: ${
+              classCode ||
+              "AUTO-" + Math.random().toString(36).substr(2, 6).toUpperCase()
+            }`
+          );
+          window.location.href = "dashboard-teacher.html";
+        }, 500);
+      }
+    </script>
+  </body>
+</html>

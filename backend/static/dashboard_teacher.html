@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Professor - Tech For All</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path
+                d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
+                fill="white"
+                opacity="0.2"
+              />
+              <path
+                d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Tech For All</h1>
+            <p>Inclusão Digital com Segurança</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="role-badge" id="currentRole">Professor</div>
+          <button class="btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <section class="screen" id="dashboard-teacher">
+        <div class="dashboard-header">
+          <div>
+            <h2 id="welcomeName">Olá, Professor 👋</h2>
+            <p class="subtitle">Gerencie suas turmas e atividades</p>
+          </div>
+          <div class="header-buttons">
+            <button
+              class="btn-primary"
+              onclick="window.location.href='/create_class.html'"
+            >
+              <span class="icon">+</span> Nova Turma
+            </button>
+            <button
+              class="btn-outline"
+              onclick="window.location.href='/reports.html'"
+            >
+              Relatórios
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Turmas Ativas</p>
+              <h3 class="stat-value" id="totalClasses">0</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                ></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Atividades</p>
+              <h3 class="stat-value">
+                0 <span class="stat-small">/ pendentes</span>
+              </h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <p class="stat-label">Presenças</p>
+              <h3 class="stat-value">Hoje 08:30</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="main-content">
+            <div class="card">
+              <div class="card-header">
+                <h3>Suas Turmas</h3>
+              </div>
+              <div class="class-list" id="teacherClassList">
+                <p style="color: var(--text-secondary); padding: 20px">
+                  Carregando turmas...
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="sidebar">
+            <div class="card">
+              <h3>Menu Rápido</h3>
+              <nav class="sidebar-nav">
+                <a href="/diary.html" class="nav-item">
+                  <span class="nav-icon">📝</span>
+                  <span>Diário de Aula</span>
+                </a>
+                <a href="/activities_teacher.html" class="nav-item">
+                  <span class="nav-icon">📋</span>
+                  <span>Atividades</span>
+                </a>
+                <a href="/reports.html" class="nav-item">
+                  <span class="nav-icon">📊</span>
+                  <span>Relatórios</span>
+                </a>
+                <a href="/chat.html" class="nav-item">
+                  <span class="nav-icon">💬</span>
+                  <span>Chat IA</span>
+                </a>
+              </nav>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
+        Acadêmico
+      </p>
+    </footer>
+
+    <script src="/common.js"></script>
+    <script src="/script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const s = getSession();
+        if (!s.user_id || s.role !== "teacher") {
+          window.location.href = "/";
+          return;
+        }
+
+        const listContainer = document.getElementById("teacherClassList");
+        listContainer.innerHTML =
+          "<p style='color:var(--text-secondary);padding:20px;'>Carregando turmas...</p>";
+
+        try {
+          const res = await fetch(
+            `/api/turmas?userId=${s.user_id}&role=${s.role}`
+          );
+          const data = await res.json();
+
+          if (!data.success || !data.turmas.length) {
+            listContainer.innerHTML =
+              "<p style='color:var(--text-secondary);padding:20px;'>Nenhuma turma cadastrada ainda.</p>";
+            return;
+          }
+
+          listContainer.innerHTML = "";
+          document.getElementById("totalClasses").textContent =
+            data.turmas.length;
+
+          data.turmas.forEach((t) => {
+            const div = document.createElement("div");
+            div.className = "class-item";
+            div.innerHTML = `
+              <div class="class-info">
+                <h4>${escapeHtml(t.nome)}</h4>
+                <p>${escapeHtml(
+                  t.descricao || "Ver alunos • Diário • Atividades"
+                )}</p>
+              </div>
+              <button class="btn-outline-small" onclick="window.location.href='/turma.html?id=${
+                t.id
+              }'">
+                Abrir
+              </button>
+            `;
+            listContainer.appendChild(div);
+          });
+        } catch (err) {
+          console.error("Erro ao carregar turmas:", err);
+          listContainer.innerHTML =
+            "<p style='color:red;padding:20px;'>Erro ao carregar turmas.</p>";
+        }
+      });
+    </script>
+  </body>
+</html>
