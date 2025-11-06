@@ -49,21 +49,11 @@
               <h3>Aulas e Materiais</h3>
               <p>Acesse os materiais das aulas</p>
             </div>
-            <div class="lesson-list">
-              <div class="lesson-item">
-                <div class="lesson-info">
-                  <h4>Frações</h4>
-                  <p>25/10/2025</p>
-                </div>
-                <button class="btn-outline-small">Baixar</button>
-              </div>
-              <div class="lesson-item">
-                <div class="lesson-info">
-                  <h4>Números Decimais</h4>
-                  <p>24/10/2025</p>
-                </div>
-                <button class="btn-outline-small">Ver</button>
-              </div>
+
+            <div id="lessonList" class="lesson-list">
+              <p style="text-align: center; color: gray; width: 100%">
+                Nenhum material disponível no momento.
+              </p>
             </div>
           </div>
         </div>
@@ -78,6 +68,44 @@
     </footer>
 
     <script src="/common.js"></script>
-    <script src="/script.js"></script>
+    <script>
+      const API_BASE_URL = "http://127.0.0.1:5050/api";
+
+      // Função para carregar aulas — deixada limpa para conectar depois
+      async function loadLessons() {
+        const list = document.getElementById("lessonList");
+        list.innerHTML = `
+          <p style="text-align: center; color: gray;">Carregando materiais...</p>
+        `;
+
+        try {
+          // Quando implementar o endpoint, substituir a chamada abaixo:
+          // const res = await fetch(`${API_BASE_URL}/materiais`);
+          // const data = await res.json();
+          // if (data.success && data.materiais.length > 0) { ... }
+
+          // Por enquanto, apenas mensagem padrão:
+          setTimeout(() => {
+            list.innerHTML = `
+              <p style="text-align: center; color: gray;">
+                Nenhum material disponível no momento.
+              </p>`;
+          }, 500);
+        } catch (err) {
+          console.error("Erro ao carregar materiais:", err);
+          list.innerHTML = `
+            <p style="text-align: center; color: red;">
+              Erro ao conectar com o servidor.
+            </p>`;
+        }
+      }
+
+      function viewMaterial(url) {
+        if (!url) return alert("Material indisponível.");
+        window.open(url, "_blank");
+      }
+
+      document.addEventListener("DOMContentLoaded", loadLessons);
+    </script>
   </body>
 </html>

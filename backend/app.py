@@ -13,14 +13,17 @@ load_dotenv()
 def create_app():
     """
     Cria e configura a aplicação Flask.
-    O frontend multipágina está na pasta 'static' e o backend na API centralizada 'api.py'.
+    O frontend multipágina está em 'static' e o backend na API centralizada 'routes/api.py'.
     """
     app = Flask(__name__, static_folder="static", static_url_path="")
     CORS(app)
 
     # =====================================================
-    # CONFIGURAÇÃO DO BANCO DE DADOS
+    # CONFIGURAÇÕES GERAIS
     # =====================================================
+    app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "uploads")
+
+    # Banco de dados
     user = os.getenv("DB_USER")
     password = os.getenv("DB_PASS")
     host = os.getenv("DB_HOST")
@@ -34,7 +37,7 @@ def create_app():
     db.init_app(app)
 
     # =====================================================
-    # BLUEPRINTS (ROTAS DE API)
+    # BLUEPRINTS (API)
     # =====================================================
     from routes.api import bp as api_bp
     app.register_blueprint(api_bp)
@@ -42,13 +45,10 @@ def create_app():
     # =====================================================
     # ROTAS DO FRONTEND (PÁGINAS HTML)
     # =====================================================
-
-    # Página inicial (login)
     @app.route("/")
     def serve_index():
         return send_from_directory(app.static_folder, "index.html")
 
-    # Painéis principais
     @app.route("/dashboard/teacher")
     def serve_dashboard_teacher():
         return send_from_directory(app.static_folder, "dashboard_teacher.html")
@@ -57,7 +57,6 @@ def create_app():
     def serve_dashboard_student():
         return send_from_directory(app.static_folder, "dashboard_student.html")
 
-    # Páginas adicionais
     @app.route("/create_class")
     def serve_create_class():
         return send_from_directory(app.static_folder, "create_class.html")
@@ -68,11 +67,11 @@ def create_app():
 
     @app.route("/activities/teacher")
     def serve_activities_teacher():
-        return send_from_directory(app.static_folder, "actives_teacher.html")
+        return send_from_directory(app.static_folder, "activities_teacher.html")
 
     @app.route("/activities/student")
     def serve_activities_student():
-        return send_from_directory(app.static_folder, "actives_student.html")
+        return send_from_directory(app.static_folder, "activities_student.html")
 
     @app.route("/lessons")
     def serve_lessons():
@@ -99,10 +98,7 @@ def create_app():
     # =====================================================
     @app.route("/<path:filename>")
     def serve_static_files(filename):
-        """
-        Garante que arquivos estáticos (CSS, JS, imagens, etc.)
-        possam ser servidos diretamente da pasta 'static'
-        """
+        """Permite servir arquivos estáticos diretamente da pasta 'static'."""
         return send_from_directory(app.static_folder, filename)
 
     # =====================================================

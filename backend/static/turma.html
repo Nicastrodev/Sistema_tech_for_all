@@ -229,7 +229,6 @@
                     </tr>
                   </thead>
                   <tbody id="studentsTableBody">
-                    <!-- Linha de carregamento -->
                     <tr class="loading-row">
                       <td colspan="5" style="text-align: center; padding: 40px">
                         <p style="color: var(--text-secondary)">
@@ -257,11 +256,11 @@
                 </a>
                 <a
                   href="#"
-                  onclick="generateReport(); return false;"
+                  onclick="gerarRelatorioPDF(); return false;"
                   class="nav-item"
                 >
                   <span class="nav-icon">📊</span>
-                  <span>Gerar Relatório</span>
+                  <span>Gerar Relatório PDF</span>
                 </a>
                 <a
                   href="#"
@@ -306,7 +305,7 @@
         Acadêmico
       </p>
     </footer>
-    
+
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const s = getSession();
@@ -315,6 +314,31 @@
         else if (s && s.role === "student") link.href = "/dashboard/student";
         else link.href = "/";
       });
+
+      async function gerarRelatorioPDF() {
+        const turmaId = getQueryParam("id");
+        const session = getSession();
+        if (!turmaId || !session.user_id) {
+          alert("Não foi possível gerar o relatório. Dados ausentes.");
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `/api/relatorios/turma/${turmaId}/pdf?userId=${session.user_id}&role=${session.role}`
+          );
+          const data = await res.json();
+
+          if (data.success && data.pdf_url) {
+            window.open(data.pdf_url, "_blank");
+          } else {
+            alert(data.message || "Erro ao gerar o relatório.");
+          }
+        } catch (err) {
+          console.error("Erro ao gerar relatório:", err);
+          alert("Erro ao gerar o relatório PDF.");
+        }
+      }
     </script>
 
     <script src="/common.js"></script>

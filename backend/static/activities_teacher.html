@@ -44,6 +44,7 @@
     <main class="main-container">
       <section class="screen">
         <div class="form-container">
+          <!-- CRIAR NOVA ATIVIDADE -->
           <div class="card">
             <div class="card-header">
               <h3>Gerenciar Atividades</h3>
@@ -78,7 +79,7 @@
                 <button
                   type="button"
                   class="btn-outline"
-                  onclick="window.location.href='dashboard-teacher.html'"
+                  onclick="window.location.href='dashboard_teacher.html'"
                 >
                   Voltar
                 </button>
@@ -86,23 +87,13 @@
             </form>
           </div>
 
+          <!-- ENTREGAS RECENTES -->
           <div class="card" style="margin-top: 24px">
             <div class="card-header">
               <h3>Entregas Recentes</h3>
             </div>
-            <div class="submission-list">
-              <div class="submission-item">
-                <div class="submission-info">
-                  <h4>Ana Silva</h4>
-                  <p>Arquivo.pdf • Enviado hoje às 14:30</p>
-                </div>
-                <div class="submission-actions">
-                  <button class="btn-outline-small">Baixar</button>
-                  <button class="btn-primary-small" onclick="autoGrade()">
-                    Corrigir com IA
-                  </button>
-                </div>
-              </div>
+            <div id="submissionList" class="submission-list">
+              <p>Carregando entregas...</p>
             </div>
           </div>
         </div>
@@ -119,49 +110,178 @@
     <script src="/common.js"></script>
     <script src="/script.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const actDueInput = document.getElementById("actDue");
-        if (actDueInput) {
-          const today = new Date().toISOString().split("T")[0];
-          actDueInput.min = today;
-        }
-      });
+      const API_BASE = window.location.origin + "/api";
 
-      function publishActivity(event) {
+      function getSession() {
+        return {
+          user_id: localStorage.getItem("tf_user_id"),
+          role: localStorage.getItem("tf_role"),
+          name: localStorage.getItem("tf_name"),
+        };
+      }
+
+      function notify(message, type = "info") {
+        if (typeof showToast === "function") showToast(message, type);
+        else alert(message);
+      }
+
+      // ===========================
+      // PUBLICAR NOVA ATIVIDADE
+      // ===========================
+      async function publishActivity(event) {
         event.preventDefault();
 
-        const actTitle = document.getElementById("actTitle").value;
-        const actDesc = document.getElementById("actDesc").value;
-        const actDue = document.getElementById("actDue").value;
+        const session = getSession();
+        if (!session.user_id || session.role !== "teacher") {
+          return notify("Sessão inválida. Faça login novamente.", "error");
+        }
 
-        if (!actTitle || !actDue) {
-          alert("Por favor, preencha o título e o prazo da atividade.");
+        const title = document.getElementById("actTitle").value.trim();
+        const desc = document.getElementById("actDesc").value.trim();
+        const due = document.getElementById("actDue").value;
+
+        if (!title || !due) {
+          return notify("Preencha título e prazo antes de publicar.", "error");
+        }
+
+        const body = {
+          titulo: title,
+          descricao: desc,
+          prazo: due,
+          professor_id: session.user_id,
+        };
+
+        try {
+          const res = await fetch(`${API_BASE}/tarefas`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-User-Id": session.user_id,
+              "X-User-Role": session.role,
+            },
+            body: JSON.stringify(body),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success)
+            throw new Error(data.message || "Erro ao criar atividade.");
+
+          notify(`Atividade "${title}" publicada com sucesso!`, "success");
+          document.querySelector("form").reset();
+          loadSubmissions();
+        } catch (err) {
+          console.error(err);
+          notify("Erro ao publicar: " + err.message, "error");
+        }
+      }
+
+      // ===========================
+      // LISTAR ENTREGAS DOS ALUNOS
+      // ===========================
+      async function loadSubmissions() {
+        const session = getSession();
+        const container = document.getElementById("submissionList");
+
+        if (!session.user_id || session.role !== "teacher") {
+          container.innerHTML =
+            "<p>Erro: sessão inválida. Faça login novamente.</p>";
           return;
         }
 
-        setTimeout(() => {
-          alert(
-            `✓ Atividade "${actTitle}" publicada com sucesso!\n\nPrazo de entrega: ${formatDate(
-              actDue
-            )}`
+        try {
+          const res = await fetch(
+            `${API_BASE}/tarefas/entregas?userId=${session.user_id}&role=teacher`,
+            {
+              headers: {
+                "X-User-Id": session.user_id,
+                "X-User-Role": session.role,
+              },
+            }
           );
+          const data = await res.json();
 
-          document.getElementById("actTitle").value = "";
-          document.getElementById("actDesc").value = "";
-          document.getElementById("actDue").value = "";
-        }, 500);
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || "Falha ao carregar entregas.");
+          }
+
+          const entregas = data.entregas;
+          if (!entregas || entregas.length === 0) {
+            container.innerHTML =
+              "<p>Nenhuma entrega de aluno foi recebida ainda.</p>";
+            return;
+          }
+
+          container.innerHTML = "";
+          entregas.forEach((entrega) => {
+            const date = entrega.data_envio
+              ? new Date(entrega.data_envio).toLocaleString("pt-BR")
+              : "Data não registrada";
+
+            const item = document.createElement("div");
+            item.className = "submission-item";
+            item.innerHTML = `
+              <div class="submission-info">
+                <h4>${entrega.aluno_nome}</h4>
+                <p>${entrega.arquivo_nome} • Enviado em ${date}</p>
+              </div>
+              <div class="submission-actions">
+                <button class="btn-outline-small"
+                  onclick="downloadFile('${entrega.arquivo_url}')">
+                  Baixar
+                </button>
+                <input type="number" id="nota-${entrega.id}" class="grade-input" min="0" max="10" step="0.1" placeholder="Nota" />
+                <button class="btn-primary-small" onclick="sendGrade(${entrega.id})">Salvar Nota</button>
+              </div>
+            `;
+            container.appendChild(item);
+          });
+        } catch (err) {
+          console.error(err);
+          container.innerHTML = `<p>Erro ao carregar entregas: ${err.message}</p>`;
+        }
       }
 
-      function autoGrade() {
-        const grades = ["8.5", "9.0", "7.5", "9.5", "8.0"];
-        const randomGrade = grades[Math.floor(Math.random() * grades.length)];
-
-        setTimeout(() => {
-          alert(
-            `✓ Correção automática concluída!\n\nNota sugerida pela IA: ${randomGrade}\n\n(Esta é uma simulação. A correção real pode levar em conta vários critérios)`
-          );
-        }, 1000);
+      function downloadFile(url) {
+        if (!url) return notify("Arquivo não disponível.", "error");
+        window.open(url, "_blank");
       }
+
+      // ===========================
+      // ENVIAR NOTA PARA O BACKEND
+      // ===========================
+      async function sendGrade(respostaId) {
+        const input = document.getElementById(`nota-${respostaId}`);
+        const nota = parseFloat(input.value);
+        const session = getSession();
+
+        if (isNaN(nota) || nota < 0 || nota > 10) {
+          return notify("Digite uma nota válida entre 0 e 10.", "error");
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/tarefas/${respostaId}/avaliar`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-User-Id": session.user_id,
+              "X-User-Role": session.role,
+            },
+            body: JSON.stringify({ nota }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success)
+            throw new Error(data.message || "Erro ao salvar nota.");
+
+          notify("Nota registrada com sucesso!", "success");
+          input.value = "";
+        } catch (err) {
+          console.error(err);
+          notify("Erro ao registrar nota: " + err.message, "error");
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", loadSubmissions);
     </script>
   </body>
 </html>

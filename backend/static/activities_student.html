@@ -49,22 +49,9 @@
               <h3>Minhas Atividades</h3>
               <p>Visualize e envie suas atividades</p>
             </div>
-            <div class="activity-list">
-              <div class="activity-item">
-                <div class="activity-info">
-                  <h4>Expressões Numéricas</h4>
-                  <p class="activity-due">Prazo: 27/10/2025</p>
-                </div>
-                <div class="activity-upload">
-                  <input type="file" id="uploadFile" class="file-input" />
-                  <button class="btn-primary-small" onclick="sendActivity()">
-                    Enviar
-                  </button>
-                  <button class="btn-outline-small" onclick="reviewWithAI()">
-                    Revisar com IA
-                  </button>
-                </div>
-              </div>
+
+            <div id="activityList" class="activity-list">
+              <p>Carregando atividades...</p>
             </div>
           </div>
         </div>
@@ -81,35 +68,134 @@
     <script src="/common.js"></script>
     <script src="/script.js"></script>
     <script>
-      function sendActivity() {
-        const fileInput = document.getElementById("uploadFile");
+      const API_BASE = window.location.origin + "/api";
 
-        if (!fileInput.files || fileInput.files.length === 0) {
-          alert("Por favor, selecione um arquivo para enviar.");
+      function getSession() {
+        return {
+          user_id: localStorage.getItem("tf_user_id"),
+          role: localStorage.getItem("tf_role"),
+          name: localStorage.getItem("tf_name"),
+        };
+      }
+
+      function notify(message, type = "info") {
+        if (typeof showToast === "function") {
+          showToast(
+            message,
+            type === "error"
+              ? "error"
+              : type === "success"
+              ? "success"
+              : "info"
+          );
+        } else {
+          alert(message);
+        }
+      }
+
+      // 🔹 Carrega todas as atividades do aluno
+      async function loadActivities() {
+        const list = document.getElementById("activityList");
+        const session = getSession();
+
+        if (!session.user_id || session.role !== "student") {
+          list.innerHTML = "<p>Erro: sessão inválida. Faça login novamente.</p>";
           return;
         }
 
-        const fileName = fileInput.files[0].name;
-
-        setTimeout(() => {
-          alert(
-            `✓ Arquivo "${fileName}" enviado com sucesso!\n\nSeu professor será notificado.`
+        try {
+          const res = await fetch(
+            `${API_BASE}/tarefas?userId=${session.user_id}&role=${session.role}`,
+            {
+              headers: {
+                "X-User-Id": session.user_id,
+                "X-User-Role": session.role,
+              },
+            }
           );
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || "Falha ao carregar atividades.");
+          }
+
+          if (!data.tarefas || data.tarefas.length === 0) {
+            list.innerHTML = "<p>Nenhuma atividade disponível no momento.</p>";
+            return;
+          }
+
+          list.innerHTML = "";
+          data.tarefas.forEach((tarefa) => {
+            const prazo = tarefa.prazo
+              ? new Date(tarefa.prazo).toLocaleDateString("pt-BR")
+              : "Sem prazo";
+
+            const item = document.createElement("div");
+            item.className = "activity-item";
+            item.setAttribute("data-tarefa-id", tarefa.id);
+            item.innerHTML = `
+              <div class="activity-info">
+                <h4>${tarefa.titulo}</h4>
+                <p class="activity-due">Prazo: ${prazo}</p>
+              </div>
+              <div class="activity-upload">
+                <input type="file" id="uploadFile-${tarefa.id}" class="file-input" />
+                <button class="btn-primary-small" onclick="sendActivityFromElement(this)">Enviar</button>
+              </div>
+            `;
+            list.appendChild(item);
+          });
+        } catch (err) {
+          console.error(err);
+          list.innerHTML = `<p>Erro ao carregar atividades: ${err.message}</p>`;
+        }
+      }
+
+      // 🔹 Envia a atividade selecionada
+      async function sendActivityFromElement(button) {
+        const item = button.closest(".activity-item");
+        const tarefaId = item.getAttribute("data-tarefa-id");
+        const fileInput = item.querySelector(".file-input");
+        const session = getSession();
+
+        if (!fileInput.files.length) {
+          return notify("Selecione um arquivo antes de enviar.", "error");
+        }
+
+        const form = new FormData();
+        form.append("file", fileInput.files[0]);
+
+        button.disabled = true;
+        const originalText = button.textContent;
+        button.textContent = "Enviando...";
+
+        try {
+          const res = await fetch(`${API_BASE}/tarefas/${tarefaId}/responder`, {
+            method: "POST",
+            headers: {
+              "X-User-Id": session.user_id,
+              "X-User-Role": session.role,
+            },
+            body: form,
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || "Erro ao enviar atividade.");
+          }
+
+          notify("Atividade enviada com sucesso!", "success");
           fileInput.value = "";
-        }, 1000);
+        } catch (err) {
+          console.error("Erro no envio:", err);
+          notify("Falha ao enviar: " + err.message, "error");
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
       }
 
-      function reviewWithAI() {
-        const tips = [
-          "Dica IA: Revise sua ortografia e gramática antes de enviar.\n\n✓ Verifique pontuação\n✓ Confira acentuação\n✓ Releia o texto em voz alta",
-          "Dica IA: Sua resposta está bem estruturada! Considere adicionar mais exemplos práticos.\n\n✓ Introdução clara\n✓ Desenvolvimento coerente\n✓ Conclusão objetiva",
-          "Dica IA: Ótimo trabalho! Algumas sugestões:\n\n✓ Expanda o segundo parágrafo\n✓ Adicione referências bibliográficas\n✓ Revise os cálculos matemáticos",
-          "Dica IA: Seu texto está claro e objetivo!\n\n✓ Linguagem adequada\n✓ Argumentação consistente\n✓ Boa apresentação visual",
-        ];
-
-        const randomTip = tips[Math.floor(Math.random() * tips.length)];
-        alert(randomTip);
-      }
+      document.addEventListener("DOMContentLoaded", loadActivities);
     </script>
   </body>
 </html>

@@ -47,8 +47,9 @@
           <div class="card">
             <div class="card-header">
               <h3>Minhas Notas</h3>
-              <p>Acompanhe seu desempenho</p>
+              <p>Acompanhe seu desempenho em cada atividade</p>
             </div>
+
             <table class="grades-table">
               <thead>
                 <tr>
@@ -57,19 +58,19 @@
                   <th>Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="gradesTableBody">
                 <tr>
-                  <td>Atividade 1</td>
-                  <td><span class="grade-value">8.5</span></td>
-                  <td><span class="status-badge approved">Aprovado</span></td>
-                </tr>
-                <tr>
-                  <td>Atividade 2</td>
-                  <td><span class="grade-value">9.0</span></td>
-                  <td><span class="status-badge approved">Aprovado</span></td>
+                  <td colspan="3" style="text-align: center; color: gray">
+                    Carregando notas...
+                  </td>
                 </tr>
               </tbody>
             </table>
+
+            <div class="average-section">
+              <h4>Média Geral: <span id="averageGrade">--</span></h4>
+              <p id="statusText">--</p>
+            </div>
           </div>
         </div>
       </section>
@@ -77,12 +78,4 @@
 
     <footer class="footer">
       <p>
-        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
-        Acadêmico
-      </p>
-    </footer>
-
-    <script src="/common.js"></script>
-    <script src="/script.js"></script>
-  </body>
-</html>
+        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Pr

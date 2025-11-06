@@ -1,7 +1,11 @@
-// ================== CONFIGURAÇÃO DA API ==================
+/* ==========================
+   CONFIGURAÇÃO BASE
+========================== */
 const API_BASE_URL = `${window.location.origin}/api`;
 
-/* ================== UTIL / AUTH ================== */
+/* ==========================
+   SESSÃO / AUTH
+========================== */
 function setSessionFromLogin(apiResponse) {
   localStorage.setItem("tf_user_id", apiResponse.user_id);
   localStorage.setItem("tf_role", apiResponse.role);
@@ -22,21 +26,17 @@ function getSession() {
   };
 }
 
-/* ================== LOGIN ================== */
+/* ==========================
+   LOGIN
+========================== */
 async function doLogin(event) {
   event.preventDefault();
-  const emailEl = document.getElementById("email");
-  const passwordEl = document.getElementById("password");
-  const roleEl = document.getElementById("roleSelect");
+  const email = document.getElementById("email")?.value.trim();
+  const password = document.getElementById("password")?.value.trim();
+  const role = document.getElementById("roleSelect")?.value;
 
-  const email = emailEl?.value.trim();
-  const password = passwordEl?.value.trim();
-  const role = roleEl?.value;
-
-  if (!email || !password || !role) {
-    alert("Por favor, preencha todos os campos.");
-    return;
-  }
+  if (!email || !password || !role)
+    return showToast("Preencha todos os campos.", "error");
 
   try {
     const res = await fetch(`${API_BASE_URL}/login`, {
@@ -48,282 +48,237 @@ async function doLogin(event) {
 
     if (data.success) {
       setSessionFromLogin(data);
+      showToast("Login realizado com sucesso!", "success");
 
-      // redirecionar para a página correta
-      if (data.role === "teacher") window.location.href = "/dashboard/teacher";
-      else window.location.href = "/dashboard/student";
-    } else {
-      alert(data.message || "Credenciais inválidas");
-    }
+      if (data.role === "teacher")
+        window.location.href = "/dashboard_teacher.html";
+      else window.location.href = "/dashboard_student.html";
+    } else showToast(data.message || "Credenciais inválidas", "error");
   } catch (err) {
     console.error("Erro no login:", err);
-    alert("Erro ao conectar com o servidor.");
+    showToast("Erro ao conectar com o servidor.", "error");
   }
 }
 
-function presetDemo() {
-  document.getElementById("email").value = "demo@techforall.com";
-  document.getElementById("password").value = "123456";
-}
-
-/* ================== LOGOUT ================== */
+/* ==========================
+   LOGOUT
+========================== */
 function logout() {
   if (!confirm("Deseja realmente sair?")) return;
   clearSession();
   window.location.href = "/";
 }
 
-/* ================== HELPERS ================== */
-function escapeHtml(text) {
-  if (!text) return "";
-  return String(text).replace(/[&<>"'`=\/]/g, (s) => {
-    return {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-      "/": "&#x2F;",
-      "`": "&#x60;",
-      "=": "&#x3D;",
-    }[s];
-  });
-}
+/* ==========================
+   HELPER UNIVERSAL DE FETCH
+========================== */
+async function apiRequest(path, method = "GET", body = null) {
+  const s = getSession();
+  const headers = {
+    "Content-Type": "application/json",
+    "X-User-Id": s.user_id,
+    "X-User-Role": s.role,
+  };
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
 
-function formatDate(dateString) {
-  if (!dateString) return "";
-  const d = new Date(dateString + "T00:00:00");
-  return d.toLocaleDateString("pt-BR");
-}
-
-/* ================== TURMAS ================== */
-async function fetchTurmasApi(userId, role) {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/turmas?userId=${userId}&role=${role}`
-    );
-    if (!res.ok) return { success: false, turmas: [] };
+    const res = await fetch(`${API_BASE_URL}${path}`, opts);
     return await res.json();
-  } catch (err) {
-    console.error("Erro fetchTurmasApi:", err);
-    return { success: false, turmas: [] };
+  } catch (e) {
+    console.error("Erro API:", e);
+    return { success: false, message: "Erro ao conectar com servidor." };
   }
 }
 
-async function loadTurmasTeacher() {
-  const s = getSession();
-  const container = document.querySelector(".class-list");
-  if (!container) return;
-  container.innerHTML = "";
-
-  if (s.user_id && s.role) {
-    const data = await fetchTurmasApi(s.user_id, s.role);
-    if (data?.success && data.turmas?.length > 0) {
-      data.turmas.forEach((t) => {
-        const wrap = document.createElement("div");
-        wrap.className = "class-item";
-        wrap.innerHTML = `
-          <div class="class-info">
-            <h4>${escapeHtml(t.nome)}</h4>
-            <p>${escapeHtml(
-              t.descricao || "Ver alunos • Diário • Atividades"
-            )}</p>
-          </div>
-          <button class="btn-outline-small" onclick="openClass('${
-            t.nome
-          }')">Abrir</button>
-        `;
-        container.appendChild(wrap);
-      });
-      return;
-    }
-  }
-
-  // fallback (demo)
-  ["7º A", "8º B"].forEach((nome) => {
-    const wrap = document.createElement("div");
-    wrap.className = "class-item";
-    wrap.innerHTML = `
-      <div class="class-info">
-        <h4>${nome}</h4>
-        <p>Ver alunos • Diário • Atividades</p>
-      </div>
-      <button class="btn-outline-small">Abrir</button>
-    `;
-    container.appendChild(wrap);
-  });
-}
-
-async function loadTurmasStudent() {
-  const s = getSession();
-  const container = document.querySelector(".class-list");
-  if (!container) return;
-  container.innerHTML = "";
-
-  if (s.user_id && s.role) {
-    const data = await fetchTurmasApi(s.user_id, s.role);
-    if (data?.success && data.turmas?.length > 0) {
-      data.turmas.forEach((t) => {
-        const wrap = document.createElement("div");
-        wrap.className = "class-item";
-        wrap.innerHTML = `
-          <div class="class-info">
-            <h4>${escapeHtml(t.nome)}</h4>
-            <p>Ver aulas • Atividades</p>
-          </div>
-          <button class="btn-outline-small" onclick="openClassStudent('${
-            t.nome
-          }')">Abrir</button>
-        `;
-        container.appendChild(wrap);
-      });
-      return;
-    }
-  }
-
-  // fallback demo
-  ["Português", "Matemática"].forEach((nome) => {
-    const wrap = document.createElement("div");
-    wrap.className = "class-item";
-    wrap.innerHTML = `
-      <div class="class-info">
-        <h4>${nome}</h4>
-        <p>Ver aulas • Atividades</p>
-      </div>
-      <button class="btn-outline-small">Abrir</button>
-    `;
-    container.appendChild(wrap);
-  });
-}
-
-/* ================== CRIAÇÃO DE TURMA ================== */
+/* ==========================
+   CRIAR TURMA (PROFESSOR)
+========================== */
 async function saveClass(event) {
   event.preventDefault();
-  const nome = document.getElementById("className")?.value.trim();
-  const desc = document.getElementById("classDesc")?.value.trim();
+  const nome = document.getElementById("className").value.trim();
+  const desc = document.getElementById("classDesc").value.trim();
 
-  if (!nome) {
-    alert("Por favor, preencha o nome da turma.");
-    return;
-  }
+  if (!nome) return showToast("Preencha o nome da turma.", "error");
 
   const s = getSession();
-  if (!s.user_id) {
-    alert("Usuário não autenticado.");
-    return;
+  if (!s.user_id) return showToast("Sessão expirada.", "error");
+
+  const data = await apiRequest("/turmas", "POST", {
+    className: nome,
+    classDesc: desc,
+    userId: s.user_id,
+    role: s.role,
+  });
+
+  if (data.success) {
+    showToast(`Turma criada! Código: ${data.codigo_acesso}`, "success");
+    setTimeout(() => (window.location.href = "/dashboard_teacher.html"), 1000);
+  } else showToast(data.message, "error");
+}
+
+/* ==========================
+   ENTRAR EM TURMA (ALUNO)
+========================== */
+async function joinClassByCode() {
+  const code = prompt("Digite o código da turma (5 caracteres):");
+  if (!code) return;
+
+  const s = getSession();
+  const data = await apiRequest("/turmas/entrar", "POST", {
+    codigo: code,
+    userId: s.user_id,
+    role: s.role,
+  });
+
+  if (data.success) {
+    showToast(data.message, "success");
+    setTimeout(() => window.location.reload(), 800);
+  } else showToast(data.message, "error");
+}
+
+/* ==========================
+   ADICIONAR / REMOVER ALUNO
+========================== */
+async function addStudentToClass(turmaId) {
+  const alunoId = prompt("Digite o ID do aluno a adicionar:");
+  if (!alunoId) return;
+
+  const s = getSession();
+  const data = await apiRequest(`/turmas/${turmaId}/matricular`, "POST", {
+    alunoId,
+    userId: s.user_id,
+    role: s.role,
+  });
+
+  showToast(data.message, data.success ? "success" : "error");
+  if (data.success) setTimeout(() => window.location.reload(), 800);
+}
+
+async function removeStudentFromClass(turmaId, alunoId) {
+  if (!confirm("Remover este aluno da turma?")) return;
+  const data = await apiRequest(
+    `/turmas/${turmaId}/alunos/${alunoId}`,
+    "DELETE"
+  );
+  showToast(data.message, data.success ? "success" : "error");
+  if (data.success) setTimeout(() => window.location.reload(), 800);
+}
+
+/* ==========================
+   EXCLUIR TURMA / TAREFA
+========================== */
+async function deleteClass(turmaId) {
+  if (!confirm("Excluir esta turma permanentemente?")) return;
+  const data = await apiRequest(`/turmas/${turmaId}`, "DELETE");
+  showToast(data.message, data.success ? "success" : "error");
+  if (data.success) setTimeout(() => window.location.reload(), 800);
+}
+
+async function deleteTask(taskId) {
+  if (!confirm("Excluir esta tarefa?")) return;
+  const data = await apiRequest(`/tarefas/${taskId}`, "DELETE");
+  showToast(data.message, data.success ? "success" : "error");
+  if (data.success) setTimeout(() => window.location.reload(), 800);
+}
+
+/* ==========================
+   LISTAR TURMAS
+========================== */
+async function loadClasses() {
+  const s = getSession();
+  const data = await apiRequest(`/turmas?userId=${s.user_id}&role=${s.role}`);
+  const list =
+    document.querySelector(".class-list") ||
+    document.getElementById("classList");
+  if (!list) return;
+
+  list.innerHTML = "";
+  if (!data.success || !data.turmas?.length)
+    return (list.innerHTML =
+      "<p style='padding:20px;color:gray;'>Nenhuma turma encontrada.</p>");
+
+  data.turmas.forEach((t) => {
+    const div = document.createElement("div");
+    div.className = "class-item";
+    div.innerHTML = `
+      <div class="class-info">
+        <h4>${escapeHtml(t.nome)}</h4>
+        <p>${escapeHtml(t.descricao || "Sem descrição")}</p>
+        <small><b>Código:</b> ${t.codigo_acesso}</small>
+      </div>
+      <div class="class-actions">
+        ${
+          s.role === "teacher"
+            ? `
+          <button class="btn-outline-small" onclick="addStudentToClass(${t.id})">👥 Adicionar</button>
+          <button class="btn-outline-small danger" onclick="deleteClass(${t.id})">🗑️ Excluir</button>`
+            : `
+          <button class="btn-outline-small" onclick="window.location.href='/turma.html?id=${t.id}'">Abrir</button>
+        `
+        }
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+/* ==========================
+   TOAST (alert estilizado)
+========================== */
+function showToast(msg, type = "info") {
+  let box = document.querySelector(".toast-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "toast-box";
+    document.body.appendChild(box);
   }
 
-  try {
-    const body = { className: nome, classDesc: desc, professorId: s.user_id };
-    const res = await fetch(`${API_BASE_URL}/turmas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  box.appendChild(toast);
 
-    if (data.success) {
-      alert(`Turma "${nome}" criada! Código: ${data.codigo_acesso}`);
-      window.location.href = "/dashboard/teacher";
-    } else {
-      alert(data.message || "Erro ao criar turma.");
-    }
-  } catch (err) {
-    console.error("Erro criar turma:", err);
-    alert("Erro ao conectar com o servidor.");
-  }
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 400);
+  }, 2500);
 }
 
-/* ================== CHAT IA ================== */
-let firstChat = sessionStorage.getItem("firstChat") !== "false";
-
-async function sendChat() {
-  const chatInput = document.getElementById("chatInput");
-  const chatWindow = document.getElementById("chatWindow");
-  const message = (chatInput?.value || "").trim();
-  if (!message) return;
-
-  const session = getSession();
-  const userName = session.name || "Usuário";
-
-  const userMessage = document.createElement("div");
-  userMessage.className = "chat-message";
-  userMessage.innerHTML = `<strong>Você:</strong> ${escapeHtml(message)}`;
-  chatWindow.appendChild(userMessage);
-  chatInput.value = "";
-
-  const typingIndicator = document.createElement("div");
-  typingIndicator.className = "chat-message";
-  typingIndicator.innerHTML = `<strong>Assistente IA:</strong> <em>Digitando...</em>`;
-  chatWindow.appendChild(typingIndicator);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        user_name: userName,
-        first_message: firstChat,
-      }),
-    });
-    const data = await res.json();
-
-    typingIndicator.remove();
-    const aiMessage = document.createElement("div");
-    aiMessage.className = "chat-message";
-    aiMessage.innerHTML = `<strong>Assistente IA:</strong> ${escapeHtml(
-      data.response || "⚠️ Erro ao processar resposta."
-    )}`;
-    chatWindow.appendChild(aiMessage);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-
-    firstChat = false;
-    sessionStorage.setItem("firstChat", "false");
-  } catch (err) {
-    console.error("Erro no chat:", err);
-    typingIndicator.remove();
-    const errorMessage = document.createElement("div");
-    errorMessage.className = "chat-message";
-    errorMessage.innerHTML =
-      "<strong>Assistente IA:</strong> ⚠️ Erro ao conectar com o servidor.";
-    chatWindow.appendChild(errorMessage);
-  }
+/* ==========================
+   ESCAPE HTML
+========================== */
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(
+    /[&<>"']/g,
+    (m) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
+        m
+      ])
+  );
 }
 
-/* ================== PLACEHOLDERS ================== */
-function openClass(className) {
-  alert(`Abrindo painel da turma: ${className} (em breve)`);
-}
-function openClassStudent(className) {
-  alert(`Abrindo turma: ${className} (em breve)`);
-}
-
-/* ================== INICIALIZAÇÃO ================== */
+/* ==========================
+   INICIALIZAÇÃO
+========================== */
 document.addEventListener("DOMContentLoaded", () => {
   const s = getSession();
   const path = window.location.pathname;
 
-  // controle de acesso por página
-  if (path.includes("/dashboard/teacher")) {
-    if (s.role !== "teacher") return (window.location.href = "/");
-    loadTurmasTeacher();
-  } else if (path.includes("/dashboard/student")) {
-    if (s.role !== "student") return (window.location.href = "/");
-    loadTurmasStudent();
-  }
-
-  const chatInput = document.getElementById("chatInput");
-  if (chatInput)
-    chatInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") sendChat();
-    });
+  if (path.includes("dashboard_teacher") && s.role === "teacher") loadClasses();
+  else if (path.includes("dashboard_student") && s.role === "student")
+    loadClasses();
 });
 
-/* ================== EXPORTAÇÃO GLOBAL ================== */
+/* ==========================
+   EXPORTAÇÃO GLOBAL
+========================== */
 window.doLogin = doLogin;
-window.presetDemo = presetDemo;
 window.logout = logout;
 window.saveClass = saveClass;
-window.sendChat = sendChat;
+window.joinClassByCode = joinClassByCode;
+window.addStudentToClass = addStudentToClass;
+window.removeStudentFromClass = removeStudentFromClass;
+window.deleteClass = deleteClass;
+window.deleteTask = deleteTask;
