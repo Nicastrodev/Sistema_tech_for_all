@@ -1,6 +1,14 @@
 // ================== COMMON.JS - UTILITÁRIOS GLOBAIS ==================
 
-// ------------------ SESSÃO E AUTENTICAÇÃO ------------------
+/* ==========================
+   CONFIGURAÇÃO BASE
+========================== */
+// 🔧 Centraliza a base da API (reutilizável em outros arquivos)
+window.API_BASE_URL = window.API_BASE_URL || `${window.location.origin}/api`;
+
+/* ==========================
+   SESSÃO E AUTENTICAÇÃO
+========================== */
 function getSession() {
   return {
     user_id: localStorage.getItem("tf_user_id"),
@@ -10,33 +18,36 @@ function getSession() {
 }
 
 function clearSession() {
-  localStorage.removeItem("tf_user_id");
-  localStorage.removeItem("tf_role");
-  localStorage.removeItem("tf_name");
+  ["tf_user_id", "tf_role", "tf_name"].forEach(
+    localStorage.removeItem.bind(localStorage)
+  );
 }
 
-// ------------------ VERIFICAÇÃO DE LOGIN ------------------
+/* ==========================
+   VERIFICAÇÃO DE LOGIN
+========================== */
 function checkAuth() {
   const s = getSession();
   const path = window.location.pathname;
 
-  // páginas públicas (não exigem login)
+  // Páginas públicas (sem login)
   const publicPages = ["/", "/index.html"];
   const isPublic = publicPages.some((p) => path.endsWith(p) || path === p);
 
-  // se não estiver logado e não for página pública → redireciona
+  // Bloqueia acesso a áreas restritas
   if (!s.user_id && !isPublic) {
     console.warn("Acesso negado - redirecionando para login...");
     window.location.href = "/";
     return false;
   }
 
-  // controle de acesso por role
+  // Controle por tipo de usuário
   if (path.includes("/dashboard/teacher") && s.role !== "teacher") {
     console.warn("Somente professores podem acessar esta página.");
     window.location.href = "/";
     return false;
   }
+
   if (path.includes("/dashboard/student") && s.role !== "student") {
     console.warn("Somente alunos podem acessar esta página.");
     window.location.href = "/";
@@ -46,14 +57,78 @@ function checkAuth() {
   return true;
 }
 
-// ------------------ LOGOUT GLOBAL ------------------
+/* ==========================
+   LOGOUT GLOBAL
+========================== */
 function logout() {
   if (!confirm("Deseja realmente sair da sua conta?")) return;
   clearSession();
   window.location.href = "/";
 }
 
-// ------------------ HELPERS ------------------
+/* ==========================
+   TOAST BONITO
+========================== */
+function showToast(msg, type = "info") {
+  let box = document.querySelector(".toast-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "toast-box";
+    document.body.appendChild(box);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  box.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 400);
+  }, 2500);
+}
+
+/* ==========================
+   API REQUEST UNIVERSAL
+========================== */
+async function apiRequest(
+  path,
+  method = "GET",
+  body = null,
+  includeAuth = true
+) {
+  const headers = { "Content-Type": "application/json" };
+
+  if (includeAuth) {
+    const s = getSession();
+    if (s.user_id) headers["X-User-Id"] = s.user_id;
+    if (s.role) headers["X-User-Role"] = s.role;
+  }
+
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+
+  // ✅ Evita duplicação de barras
+  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+
+  try {
+    const res = await fetch(`${window.API_BASE_URL}/${cleanPath}`, opts);
+    if (!res.ok) {
+      console.error("Erro HTTP:", res.status);
+      return { success: false, message: `Erro HTTP ${res.status}` };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return data;
+  } catch (e) {
+    console.error("Erro API:", e);
+    return { success: false, message: "Erro ao conectar com o servidor." };
+  }
+}
+
+/* ==========================
+   HELPERS
+========================== */
 function escapeHtml(text) {
   if (!text) return "";
   return String(text).replace(/[&<>"'`=\/]/g, (s) => {
@@ -76,18 +151,27 @@ function formatDate(dateString) {
   return d.toLocaleDateString("pt-BR");
 }
 
-// ------------------ EXECUÇÃO AUTOMÁTICA ------------------
+/* ==========================
+   EXECUÇÃO AUTOMÁTICA
+========================== */
 document.addEventListener("DOMContentLoaded", () => {
-  // bloqueia acesso não autorizado
+  const s = getSession();
+
+  // Bloqueia acesso não autorizado
   checkAuth();
 
-  // insere nome do usuário no topo, se disponível
-  const s = getSession();
+  // Se for visitante, não continua
+  if (!s.user_id) return;
+
+  // Atualiza informações do topo
   const roleBadge = document.getElementById("currentRole");
   if (roleBadge) {
-    if (s.role === "teacher") roleBadge.textContent = "Professor";
-    else if (s.role === "student") roleBadge.textContent = "Aluno";
-    else roleBadge.textContent = "Visitante";
+    roleBadge.textContent =
+      s.role === "teacher"
+        ? "Professor"
+        : s.role === "student"
+        ? "Aluno"
+        : "Visitante";
   }
 
   const welcomeEl = document.getElementById("welcomeName");
@@ -97,10 +181,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (welcomeEl2) welcomeEl2.textContent = `Olá, ${s.name || "Usuário"} 👋`;
 });
 
-// ------------------ EXPORTAÇÃO GLOBAL ------------------
+/* ==========================
+   EXPORTAÇÃO GLOBAL
+========================== */
 window.getSession = getSession;
 window.clearSession = clearSession;
 window.checkAuth = checkAuth;
 window.logout = logout;
+window.showToast = showToast;
+window.apiRequest = apiRequest;
 window.escapeHtml = escapeHtml;
 window.formatDate = formatDate;

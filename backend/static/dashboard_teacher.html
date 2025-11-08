@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard Professor - Tech For All</title>
+
     <link rel="stylesheet" href="/styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,8 +13,9 @@
       rel="stylesheet"
     />
   </head>
+
   <body>
-    <!-- Header -->
+    <!-- HEADER -->
     <header class="header">
       <div class="header-container">
         <div class="brand">
@@ -35,6 +37,7 @@
             <p>Inclusão Digital com Segurança</p>
           </div>
         </div>
+
         <div class="header-actions">
           <div class="role-badge" id="currentRole">Professor</div>
           <button class="btn-secondary" onclick="logout()">Sair</button>
@@ -52,19 +55,20 @@
           <div class="header-buttons">
             <button
               class="btn-primary"
-              onclick="window.location.href='/create_class.html'"
+              onclick="window.location.href='/create_class'"
             >
-              <span class="icon">+</span> Nova Turma
+              <span class="icon">＋</span> Nova Turma
             </button>
             <button
               class="btn-outline"
-              onclick="window.location.href='/reports.html'"
+              onclick="window.location.href='/reports'"
             >
               Relatórios
             </button>
           </div>
         </div>
 
+        <!-- Estatísticas -->
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon blue">
@@ -109,9 +113,7 @@
             </div>
             <div class="stat-content">
               <p class="stat-label">Atividades</p>
-              <h3 class="stat-value">
-                0 <span class="stat-small">/ pendentes</span>
-              </h3>
+              <h3 class="stat-value">0</h3>
             </div>
           </div>
 
@@ -138,11 +140,13 @@
           </div>
         </div>
 
+        <!-- Conteúdo Principal -->
         <div class="content-grid">
           <div class="main-content">
             <div class="card">
               <div class="card-header">
                 <h3>Suas Turmas</h3>
+                <p class="subtitle">Visualize e gerencie suas turmas abaixo</p>
               </div>
               <div class="class-list" id="teacherClassList">
                 <p style="color: var(--text-secondary); padding: 20px">
@@ -152,23 +156,24 @@
             </div>
           </div>
 
+          <!-- Sidebar -->
           <aside class="sidebar">
             <div class="card">
               <h3>Menu Rápido</h3>
               <nav class="sidebar-nav">
-                <a href="/diary.html" class="nav-item">
+                <a href="/diary" class="nav-item">
                   <span class="nav-icon">📝</span>
                   <span>Diário de Aula</span>
                 </a>
-                <a href="/activities_teacher.html" class="nav-item">
+                <a href="/activities/teacher" class="nav-item">
                   <span class="nav-icon">📋</span>
                   <span>Atividades</span>
                 </a>
-                <a href="/reports.html" class="nav-item">
+                <a href="/reports" class="nav-item">
                   <span class="nav-icon">📊</span>
                   <span>Relatórios</span>
                 </a>
-                <a href="/chat.html" class="nav-item">
+                <a href="/chat" class="nav-item">
                   <span class="nav-icon">💬</span>
                   <span>Chat IA</span>
                 </a>
@@ -191,54 +196,13 @@
     <script>
       document.addEventListener("DOMContentLoaded", async () => {
         const s = getSession();
-        if (!s.user_id || s.role !== "teacher") {
-          window.location.href = "/";
+        if (!s || s.role !== "teacher") {
+          showToast("Acesso restrito a professores.", "error");
+          setTimeout(() => (window.location.href = "/"), 1500);
           return;
         }
 
-        const listContainer = document.getElementById("teacherClassList");
-        listContainer.innerHTML =
-          "<p style='color:var(--text-secondary);padding:20px;'>Carregando turmas...</p>";
-
-        try {
-          const res = await fetch(
-            `/api/turmas?userId=${s.user_id}&role=${s.role}`
-          );
-          const data = await res.json();
-
-          if (!data.success || !data.turmas.length) {
-            listContainer.innerHTML =
-              "<p style='color:var(--text-secondary);padding:20px;'>Nenhuma turma cadastrada ainda.</p>";
-            return;
-          }
-
-          listContainer.innerHTML = "";
-          document.getElementById("totalClasses").textContent =
-            data.turmas.length;
-
-          data.turmas.forEach((t) => {
-            const div = document.createElement("div");
-            div.className = "class-item";
-            div.innerHTML = `
-              <div class="class-info">
-                <h4>${escapeHtml(t.nome)}</h4>
-                <p>${escapeHtml(
-                  t.descricao || "Ver alunos • Diário • Atividades"
-                )}</p>
-              </div>
-              <button class="btn-outline-small" onclick="window.location.href='/turma.html?id=${
-                t.id
-              }'">
-                Abrir
-              </button>
-            `;
-            listContainer.appendChild(div);
-          });
-        } catch (err) {
-          console.error("Erro ao carregar turmas:", err);
-          listContainer.innerHTML =
-            "<p style='color:red;padding:20px;'>Erro ao carregar turmas.</p>";
-        }
+        await loadClasses(); // definida em script.js
       });
     </script>
   </body>
