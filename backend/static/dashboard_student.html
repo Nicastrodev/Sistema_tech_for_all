@@ -13,7 +13,6 @@
     />
   </head>
   <body>
-    <!-- Header -->
     <header class="header">
       <div class="header-container">
         <div class="brand">
@@ -154,6 +153,19 @@
                 </a>
               </nav>
             </div>
+
+            <div class="card" style="margin-top: 20px">
+              <h3>Entrar em Turma</h3>
+              <form class="sidebar-form" onsubmit="joinClass(event)">
+                <input
+                  type="text"
+                  id="classCodeInput"
+                  placeholder="Código da Turma"
+                  required
+                />
+                <button type="submit" class="btn-primary-small">Entrar</button>
+              </form>
+            </div>
           </aside>
         </div>
       </section>
@@ -169,6 +181,15 @@
     <script src="/common.js"></script>
     <script src="/script.js"></script>
     <script>
+      // Função showToast (simples, caso não esteja em script.js)
+      function showToast(message, type = "info") {
+        if (typeof showToast === "function") {
+          showToast(message, type); // Tenta usar a global
+        } else {
+          alert(message); // Fallback
+        }
+      }
+
       document.addEventListener("DOMContentLoaded", async () => {
         const s = getSession();
         if (!s.user_id || s.role !== "student") {
@@ -215,6 +236,50 @@
             "<p style='color:red;padding:20px;'>Erro ao carregar turmas.</p>";
         }
       });
+
+      // NOVA FUNÇÃO PARA ENTRAR NA TURMA
+      async function joinClass(event) {
+        event.preventDefault();
+        const s = getSession();
+        const input = document.getElementById("classCodeInput");
+        const codigo = input.value.trim().toUpperCase();
+
+        if (!codigo) {
+          return showToast("Digite o código da turma.", "error");
+        }
+
+        const button = event.target.querySelector("button");
+        button.disabled = true;
+        button.textContent = "Aguarde...";
+
+        try {
+          const res = await fetch("/api/turmas/entrar", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-User-Id": s.user_id,
+              "X-User-Role": s.role,
+            },
+            body: JSON.stringify({ codigo_acesso: codigo }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || "Erro ao entrar na turma.");
+          }
+
+          showToast(data.message, "success");
+          input.value = "";
+          // Recarregar a lista de turmas (ou a página inteira)
+          setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+          console.error("Erro ao entrar na turma:", err);
+          showToast(err.message, "error");
+        } finally {
+          button.disabled = false;
+          button.textContent = "Entrar";
+        }
+      }
     </script>
   </body>
 </html>

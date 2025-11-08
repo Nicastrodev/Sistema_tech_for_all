@@ -3,15 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Criar Turma - Tech For All</title>
+    <title>Criar ou Editar Turma - Tech For All</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
+
   <body>
     <header class="header">
       <div class="header-container">
@@ -34,6 +33,7 @@
             <p>Inclusão Digital com Segurança</p>
           </div>
         </div>
+
         <div class="header-actions">
           <div class="role-badge">Professor</div>
           <button class="btn-secondary" onclick="logout()">Sair</button>
@@ -46,10 +46,11 @@
         <div class="form-container">
           <div class="card">
             <div class="card-header">
-              <h3>Criar Nova Turma</h3>
-              <p>Preencha os dados da nova turma</p>
+              <h3 id="formTitle">Criar Nova Turma</h3>
+              <p id="formSubtitle">Preencha os dados da turma</p>
             </div>
-            <form class="form" onsubmit="saveClass(event)">
+
+            <form id="createClassForm" class="form">
               <div class="form-group">
                 <label for="className">Nome da turma</label>
                 <input
@@ -59,6 +60,7 @@
                   required
                 />
               </div>
+
               <div class="form-group">
                 <label for="classDesc">Descrição</label>
                 <textarea
@@ -67,20 +69,23 @@
                   placeholder="Descrição breve da turma"
                 ></textarea>
               </div>
-              <div class="form-group">
-                <label for="classCode">Código de acesso</label>
-                <input
-                  type="text"
-                  id="classCode"
-                  placeholder="Código para alunos entrarem"
-                />
+
+              <div id="codeDisplay" class="form-group" style="display: none">
+                <label>Código de acesso:</label>
+                <p
+                  id="classCodeDisplay"
+                  style="font-weight: bold; color: #2e86c1"
+                ></p>
               </div>
+
               <div class="form-actions">
-                <button type="submit" class="btn-primary">Criar Turma</button>
+                <button type="submit" class="btn-primary" id="submitBtn">
+                  Criar Turma
+                </button>
                 <button
                   type="button"
                   class="btn-outline"
-                  onclick="window.location.href='dashboard-teacher.html'"
+                  onclick="window.location.href='/dashboard_teacher.html'"
                 >
                   Cancelar
                 </button>
@@ -92,37 +97,167 @@
     </main>
 
     <footer class="footer">
-      <p>
-        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
-        Acadêmico
-      </p>
+      <p>&copy; 2025 Tech For All | Protótipo Acadêmico</p>
     </footer>
 
-    <script src="/common.js"></script>
     <script src="/script.js"></script>
     <script>
-      function saveClass(event) {
-        event.preventDefault();
+      /* ==========================
+         MODAL ESTILIZADO (TOAST)
+      =========================== */
+      function showModal({ title = "Aviso", message = "", okText = "OK" }) {
+        let modal = document.getElementById("tfa-modal");
+        if (!modal) {
+          modal = document.createElement("div");
+          modal.id = "tfa-modal";
+          modal.innerHTML = `
+            <style>
+              .tfa-overlay {
+                position: fixed; inset: 0;
+                background: rgba(0,0,0,0.4);
+                display: flex; align-items: center; justify-content: center;
+                z-index: 9999;
+              }
+              .tfa-box {
+                background: #fff;
+                border-radius: 12px;
+                padding: 24px;
+                width: 90%;
+                max-width: 420px;
+                text-align: center;
+                font-family: Inter, sans-serif;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+                animation: fadeIn 0.3s ease;
+              }
+              .tfa-box h3 { color: #2E86C1; margin-bottom: 10px; }
+              .tfa-box p { color: #333; margin-bottom: 20px; white-space: pre-line; }
+              .tfa-box button {
+                background: #2E86C1; color: white;
+                border: none; border-radius: 8px;
+                padding: 8px 16px; cursor: pointer; font-weight: 600;
+              }
+              .tfa-box button:hover { background: #216499; }
+              @keyframes fadeIn { from { opacity: 0; transform: scale(0.9);} to { opacity: 1; transform: scale(1);} }
+            </style>
+            <div class="tfa-overlay">
+              <div class="tfa-box">
+                <h3 id="tfa-title"></h3>
+                <p id="tfa-msg"></p>
+                <button id="tfa-ok">${okText}</button>
+              </div>
+            </div>`;
+          document.body.appendChild(modal);
+        }
 
-        const className = document.getElementById("className").value;
-        const classDesc = document.getElementById("classDesc").value;
-        const classCode = document.getElementById("classCode").value;
+        modal.querySelector("#tfa-title").textContent = title;
+        modal.querySelector("#tfa-msg").innerHTML = message;
+        modal.style.display = "flex";
+        modal.querySelector("#tfa-ok").onclick = () =>
+          (modal.style.display = "none");
+      }
 
-        if (!className) {
-          alert("Por favor, preencha o nome da turma.");
+      /* ==========================
+         LÓGICA PRINCIPAL
+      =========================== */
+      document.addEventListener("DOMContentLoaded", async () => {
+        const user_id = localStorage.getItem("tf_user_id");
+        const role = localStorage.getItem("tf_role");
+        const turmaId = new URLSearchParams(window.location.search).get("id");
+        const form = document.getElementById("createClassForm");
+
+        if (!user_id || role !== "teacher") {
+          showModal({
+            title: "Acesso negado",
+            message:
+              "Você precisa estar logado como professor para criar ou editar turmas.",
+          });
           return;
         }
 
-        setTimeout(() => {
-          alert(
-            `Turma "${className}" criada com sucesso!\n\nCódigo de acesso: ${
-              classCode ||
-              "AUTO-" + Math.random().toString(36).substr(2, 6).toUpperCase()
-            }`
-          );
-          window.location.href = "dashboard-teacher.html";
-        }, 500);
-      }
+        // Se for edição, muda textos e preenche dados
+        if (turmaId) {
+          document.getElementById("formTitle").textContent = "Editar Turma";
+          document.getElementById("formSubtitle").textContent =
+            "Altere os dados e salve as mudanças";
+          document.getElementById("submitBtn").textContent =
+            "Salvar Alterações";
+
+          try {
+            const res = await fetch(`${API_BASE_URL}/turmas/${turmaId}`);
+            const data = await res.json();
+            if (data.success && data.turma) {
+              document.getElementById("className").value = data.turma.nome;
+              document.getElementById("classDesc").value =
+                data.turma.descricao || "";
+              document.getElementById("classCodeDisplay").textContent =
+                data.turma.codigo_acesso;
+              document.getElementById("codeDisplay").style.display = "block";
+            }
+          } catch (e) {
+            console.error("Erro ao carregar turma:", e);
+            showModal({
+              title: "Erro",
+              message: "Não foi possível carregar os dados da turma.",
+            });
+          }
+        }
+
+        // Evento de submit (criar ou atualizar)
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const nome = document.getElementById("className").value.trim();
+          const descricao = document.getElementById("classDesc").value.trim();
+
+          if (!nome)
+            return showModal({
+              title: "Campo obrigatório",
+              message: "Por favor, insira o nome da turma.",
+            });
+
+          const method = turmaId ? "PUT" : "POST";
+          const endpoint = turmaId ? `/turmas/${turmaId}` : "/turmas";
+
+          try {
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+              method,
+              headers: {
+                "Content-Type": "application/json",
+                "X-User-Id": user_id,
+                "X-User-Role": role,
+              },
+              body: JSON.stringify({ nome, descricao }),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+              showModal({
+                title: "Sucesso 🎉",
+                message: turmaId
+                  ? "Turma atualizada com sucesso!"
+                  : `Turma "${nome}" criada!\n\nCódigo: ${data.codigo_acesso}`,
+              });
+              setTimeout(
+                () => (window.location.href = "/dashboard_teacher.html"),
+                2000
+              );
+            } else {
+              showModal({
+                title: "Erro",
+                message:
+                  data.message ||
+                  "Não foi possível salvar a turma. Tente novamente.",
+              });
+            }
+          } catch (err) {
+            console.error("Erro ao salvar turma:", err);
+            showModal({
+              title: "Erro de conexão",
+              message: "Não foi possível conectar ao servidor.",
+            });
+          }
+        });
+      });
     </script>
   </body>
 </html>

@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Detalhes da Turma - Tech For All</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
+
   <body>
+    <!-- HEADER -->
     <header class="header">
       <div class="header-container">
         <div class="brand">
@@ -35,33 +35,34 @@
           </div>
         </div>
         <div class="header-actions">
-          <div class="role-badge">Professor</div>
+          <div class="role-badge" id="currentRole">Professor</div>
           <button class="btn-secondary" onclick="logout()">Sair</button>
         </div>
       </div>
     </header>
 
+    <!-- MAIN -->
     <main class="main-container">
       <section class="screen">
         <!-- Breadcrumb -->
         <div class="breadcrumb">
           <a href="#" id="dashboardLink" class="breadcrumb-link">Dashboard</a>
           <span class="breadcrumb-separator">›</span>
-          <span class="breadcrumb-current" id="breadcrumbClassName"
-            >Carregando...</span
-          >
+          <span class="breadcrumb-current" id="breadcrumbClassName">
+            Carregando...
+          </span>
         </div>
 
+        <!-- Cabeçalho da turma -->
         <div class="dashboard-header">
           <div>
             <h2 id="className">Carregando...</h2>
-            <p class="subtitle">
+            <p class="subtitle" id="pageSubtitle">
               Gerencie sua turma e acompanhe o progresso dos alunos
             </p>
           </div>
-          <div class="header-buttons">
+          <div class="header-buttons" id="teacherActions">
             <button class="btn-primary" onclick="addStudent()">
-              <span class="icon">+</span> Adicionar Aluno
             </button>
             <button class="btn-outline" onclick="editClass()">
               Editar Turma
@@ -69,8 +70,8 @@
           </div>
         </div>
 
-        <!-- Informações da Turma -->
-        <div class="stats-grid">
+        <!-- Estatísticas -->
+        <div class="stats-grid" id="teacherStats">
           <div class="stat-card">
             <div class="stat-icon blue">
               <svg
@@ -136,8 +137,9 @@
         </div>
 
         <div class="content-grid">
+          <!-- Conteúdo principal -->
           <div class="main-content">
-            <!-- Informações Gerais -->
+            <!-- Informações da turma -->
             <div class="card" style="margin-bottom: 24px">
               <div class="card-header">
                 <h3>Informações da Turma</h3>
@@ -158,26 +160,7 @@
                       onclick="copyCode()"
                       title="Copiar código"
                     >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <rect
-                          x="9"
-                          y="9"
-                          width="13"
-                          height="13"
-                          rx="2"
-                          ry="2"
-                        ></rect>
-                        <path
-                          d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                        ></path>
-                      </svg>
+                      📋
                     </button>
                   </div>
                 </div>
@@ -188,26 +171,15 @@
               </div>
             </div>
 
-            <!-- Lista de Alunos -->
+            <!-- Lista de alunos -->
             <div class="card">
               <div class="card-header">
                 <h3>Alunos Inscritos</h3>
                 <p>Lista completa de alunos matriculados na turma</p>
               </div>
 
-              <!-- Busca -->
               <div class="search-box">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <path d="m21 21-4.35-4.35"></path>
-                </svg>
+                🔍
                 <input
                   type="text"
                   id="searchStudent"
@@ -216,7 +188,6 @@
                 />
               </div>
 
-              <!-- Tabela de Alunos -->
               <div class="students-table-container">
                 <table class="students-table">
                   <thead>
@@ -225,11 +196,11 @@
                       <th>Email</th>
                       <th>Frequência</th>
                       <th>Média</th>
-                      <th>Ações</th>
+                      <th id="actionsHeader">Ações</th>
                     </tr>
                   </thead>
                   <tbody id="studentsTableBody">
-                    <tr class="loading-row">
+                    <tr>
                       <td colspan="5" style="text-align: center; padding: 40px">
                         <p style="color: var(--text-secondary)">
                           Carregando alunos...
@@ -242,38 +213,31 @@
             </div>
           </div>
 
+          <!-- Sidebar -->
           <aside class="sidebar">
-            <div class="card">
+            <div class="card" id="quickActions">
               <h3>Ações Rápidas</h3>
               <nav class="sidebar-nav">
-                <a href="diary.html" class="nav-item">
-                  <span class="nav-icon">📝</span>
-                  <span>Registrar Aula</span>
-                </a>
-                <a href="activities_teacher.html" class="nav-item">
-                  <span class="nav-icon">📋</span>
-                  <span>Nova Atividade</span>
-                </a>
+                <a href="/diary" class="nav-item">📝 Registrar Aula</a>
+                <a href="/activities/teacher" class="nav-item"
+                  >📋 Nova Atividade</a
+                >
                 <a
                   href="#"
-                  onclick="gerarRelatorioPDF(); return false;"
+                  onclick="generateReport();return false;"
                   class="nav-item"
+                  >📊 Gerar Relatório PDF</a
                 >
-                  <span class="nav-icon">📊</span>
-                  <span>Gerar Relatório PDF</span>
-                </a>
                 <a
                   href="#"
-                  onclick="exportStudents(); return false;"
+                  onclick="exportStudents();return false;"
                   class="nav-item"
+                  >📥 Exportar Lista</a
                 >
-                  <span class="nav-icon">📥</span>
-                  <span>Exportar Lista</span>
-                </a>
               </nav>
             </div>
 
-            <div class="card" style="margin-top: 16px">
+            <div class="card" style="margin-top: 16px" id="teacherStatsCard">
               <h3>Estatísticas</h3>
               <div class="stats-list">
                 <div class="stat-item">
@@ -283,7 +247,7 @@
                   >
                 </div>
                 <div class="stat-item">
-                  <span class="stat-item-label">Em recuperação</span>
+                  <span class="stat-item-label">Em Recuperação</span>
                   <span class="stat-item-value warning" id="recoveryCount"
                     >0</span
                   >
@@ -299,6 +263,7 @@
       </section>
     </main>
 
+    <!-- FOOTER -->
     <footer class="footer">
       <p>
         &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
@@ -306,42 +271,51 @@
       </p>
     </footer>
 
+    <script src="/common.js"></script>
+    <script src="/turma.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const s = getSession();
         const link = document.getElementById("dashboardLink");
-        if (s && s.role === "teacher") link.href = "/dashboard/teacher";
-        else if (s && s.role === "student") link.href = "/dashboard/student";
-        else link.href = "/";
+        const roleBadge = document.getElementById("currentRole");
+
+        // Define destino do dashboard e título do papel
+        if (s?.role === "teacher") {
+          link.href = "/dashboard/teacher";
+          roleBadge.textContent = "Professor";
+        } else if (s?.role === "student") {
+          link.href = "/dashboard/student";
+          roleBadge.textContent = "Aluno";
+        } else {
+          link.href = "/";
+          roleBadge.textContent = "Visitante";
+        }
+
+        // 🔒 Controle de acesso dinâmico
+        if (s?.role === "student") {
+          // Esconde seções exclusivas de professor
+          document.getElementById("teacherActions")?.remove();
+          document.getElementById("teacherStats")?.remove();
+          document.getElementById("quickActions")?.remove();
+          document.getElementById("teacherStatsCard")?.remove();
+          document.getElementById("actionsHeader")?.remove();
+          document.getElementById("pageSubtitle").textContent =
+            "Visualize as informações da turma e seu desempenho";
+        } else if (s?.role === "teacher") {
+          // Garante que todos os blocos do professor estejam visíveis (caso cache ou reload)
+          document.getElementById("teacherActions")?.classList.remove("hidden");
+          document.getElementById("teacherStats")?.classList.remove("hidden");
+          document.getElementById("quickActions")?.classList.remove("hidden");
+          document
+            .getElementById("teacherStatsCard")
+            ?.classList.remove("hidden");
+          document.getElementById("pageSubtitle").textContent =
+            "Gerencie sua turma e acompanhe o progresso dos alunos";
+        }
+
+        // Garante carregamento da turma
+        if (typeof loadTurma === "function") loadTurma();
       });
-
-      async function gerarRelatorioPDF() {
-        const turmaId = getQueryParam("id");
-        const session = getSession();
-        if (!turmaId || !session.user_id) {
-          alert("Não foi possível gerar o relatório. Dados ausentes.");
-          return;
-        }
-
-        try {
-          const res = await fetch(
-            `/api/relatorios/turma/${turmaId}/pdf?userId=${session.user_id}&role=${session.role}`
-          );
-          const data = await res.json();
-
-          if (data.success && data.pdf_url) {
-            window.open(data.pdf_url, "_blank");
-          } else {
-            alert(data.message || "Erro ao gerar o relatório.");
-          }
-        } catch (err) {
-          console.error("Erro ao gerar relatório:", err);
-          alert("Erro ao gerar o relatório PDF.");
-        }
-      }
     </script>
-
-    <script src="/common.js"></script>
-    <script src="/turma.js"></script>
   </body>
 </html>

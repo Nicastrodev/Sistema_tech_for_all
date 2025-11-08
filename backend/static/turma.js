@@ -1,50 +1,39 @@
-const API_BASE_URL = "http://127.0.0.1:5050/api";
+/* ==========================
+   CONFIGURAÇÃO BASE
+========================== */
+const API_BASE_URL = window.API_BASE_URL || `${window.location.origin}/api`;
 
-/* ------------------- Helpers ------------------- */
+/* ==========================
+   HELPERS
+========================== */
+// (getSession, escapeHtml, showToast, apiRequest, logout — vêm de common.js)
 function getQueryParam(param) {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get(param);
+  return new URLSearchParams(window.location.search).get(param);
 }
 
-function escapeHtml(text) {
-  if (!text) return "";
-  return String(text).replace(/[&<>"'`=\/]/g, (s) => {
-    return {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-      "/": "&#x2F;",
-      "`": "&#x60;",
-      "=": "&#x3D;",
-    }[s];
-  });
-}
-
-function getSession() {
-  return {
-    user_id: localStorage.getItem("tf_user_id"),
-    role: localStorage.getItem("tf_role"),
-    name: localStorage.getItem("tf_name"),
-  };
-}
-
-/* ------------------- Carregar turma ------------------- */
+/* ==========================
+   CARREGAR TURMA
+========================== */
 async function loadTurma() {
-  const turmaId = getQueryParam("id");
+  const turmaId = getQueryParam("id") || localStorage.getItem("last_turma_id");
+  const s = getSession();
+
   if (!turmaId) {
-    alert("Turma não especificada.");
-    window.location.href = "/dashboard/teacher";
-    return;
+    showToast("Nenhuma turma encontrada. Redirecionando...", "error");
+    return setTimeout(() => {
+      window.location.href =
+        s?.role === "student" ? "/dashboard/student" : "/dashboard/teacher";
+    }, 2000);
   }
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/turmas/${turmaId}`);
-    const data = await res.json();
+  localStorage.setItem("last_turma_id", turmaId);
 
-    if (!data.success) {
-      alert(data.message || "Erro ao carregar turma.");
+  try {
+    const data = await apiRequest(`turmas/${turmaId}`, "GET");
+
+    if (!data.success || !data.turma) {
+      console.warn("Erro ao carregar turma:", data);
+      showToast(data.message || "Erro ao carregar turma.", "error");
       return;
     }
 
@@ -54,24 +43,39 @@ async function loadTurma() {
     document.getElementById("classNameDetail").textContent = turma.nome;
     document.getElementById("classDescription").textContent =
       turma.descricao || "Sem descrição";
-    document.getElementById("classCode").textContent = turma.codigo_acesso;
+    document.getElementById("classCode").textContent =
+      turma.codigo_acesso || "-----";
 
-    // Atualizar estatísticas gerais
-    document.getElementById("totalStudents").textContent =
-      turma.total_alunos || 0;
-    document.getElementById("averageGrade").textContent =
-      turma.media_geral?.toFixed(1) || "0.0";
+    // Atualiza dados estatísticos
+    const total = turma.total_alunos || 0;
+    document.getElementById("totalStudents").textContent = total;
+    document.getElementById("averageGrade").textContent = (
+      turma.media_geral || 0
+    ).toFixed(1);
     document.getElementById("averageAttendance").textContent =
       (turma.frequencia_media || 0) + "%";
 
-    loadAlunos(turmaId);
+    // Atualiza papel no header
+    const roleBadge = document.getElementById("currentRole");
+    if (roleBadge) {
+      roleBadge.textContent =
+        s?.role === "teacher"
+          ? "Professor"
+          : s?.role === "student"
+          ? "Aluno"
+          : "Visitante";
+    }
+
+    await loadAlunos(turmaId);
   } catch (err) {
     console.error("Erro ao carregar turma:", err);
-    alert("Erro ao conectar com o servidor.");
+    showToast("Erro ao conectar com o servidor.", "error");
   }
 }
 
-/* ------------------- Carregar alunos ------------------- */
+/* ==========================
+   CARREGAR ALUNOS
+========================== */
 async function loadAlunos(turmaId) {
   const tbody = document.getElementById("studentsTableBody");
   tbody.innerHTML = `
@@ -80,16 +84,19 @@ async function loadAlunos(turmaId) {
     </td></tr>`;
 
   try {
-    const res = await fetch(`${API_BASE_URL}/turmas/${turmaId}/alunos`);
-    const data = await res.json();
+    const data = await apiRequest(`turmas/${turmaId}/alunos`, "GET");
+    const s = getSession();
+    const isTeacher = s && s.role === "teacher";
 
     if (!data.success) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red">${data.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="color:red;text-align:center;">${data.message}</td></tr>`;
       return;
     }
 
     if (!data.alunos || data.alunos.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">Nenhum aluno encontrado.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">
+        Nenhum aluno encontrado.
+      </td></tr>`;
       return;
     }
 
@@ -98,12 +105,11 @@ async function loadAlunos(turmaId) {
       recuperacao = 0,
       reprovados = 0;
 
-    data.alunos.forEach((aluno) => {
-      const tr = document.createElement("tr");
-      const frequencia = aluno.frequencia ?? 0;
-      const media = aluno.media ?? 0;
-      let status = "";
+    data.alunos.forEach((a) => {
+      const media = a.media ?? 0;
+      const frequencia = a.frequencia ?? 0;
 
+      let status = "danger";
       if (media >= 7) {
         status = "success";
         aprovados++;
@@ -111,44 +117,183 @@ async function loadAlunos(turmaId) {
         status = "warning";
         recuperacao++;
       } else {
-        status = "danger";
         reprovados++;
       }
 
+      const tr = document.createElement("tr");
+
+      // 🔒 Se for aluno, não mostra botão "Remover"
+      const actionsColumn = isTeacher
+        ? `<td><button class="btn-outline-small danger" onclick="removeAluno(${a.id})">Remover</button></td>`
+        : "";
+
       tr.innerHTML = `
-        <td>${escapeHtml(aluno.nome)}</td>
-        <td>${escapeHtml(aluno.email)}</td>
+        <td>${escapeHtml(a.nome)}</td>
+        <td>${escapeHtml(a.email)}</td>
         <td>${frequencia}%</td>
         <td class="${status}">${media.toFixed(1)}</td>
-        <td>
-          <button class="btn-outline-small" onclick="viewStudent(${
-            aluno.id
-          })">Ver</button>
-        </td>
-      `;
+        ${actionsColumn}`;
       tbody.appendChild(tr);
     });
 
-    // Atualiza contadores laterais
-    document.getElementById("approvedCount").textContent = aprovados;
-    document.getElementById("recoveryCount").textContent = recuperacao;
-    document.getElementById("failedCount").textContent = reprovados;
+    // Atualiza estatísticas apenas se professor
+    if (isTeacher) {
+      document.getElementById("approvedCount").textContent = aprovados;
+      document.getElementById("recoveryCount").textContent = recuperacao;
+      document.getElementById("failedCount").textContent = reprovados;
+    }
   } catch (err) {
     console.error("Erro ao carregar alunos:", err);
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red">Erro ao conectar com o servidor.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="color:red;text-align:center;">
+      Erro ao carregar alunos.
+    </td></tr>`;
   }
 }
 
-/* ------------------- Filtros e Ações ------------------- */
+/* ==========================
+   AÇÕES DE PROFESSOR
+========================== */
+async function addStudent() {
+  const s = getSession();
+  if (!s || s.role !== "teacher") {
+    return showToast(
+      "Acesso negado: apenas professores podem adicionar alunos.",
+      "error"
+    );
+  }
+
+  const turmaId = localStorage.getItem("last_turma_id");
+  const alunoId = prompt("Digite o ID do aluno para adicionar:");
+  if (!alunoId) return;
+
+  const data = await apiRequest(`turmas/${turmaId}/adicionar_aluno`, "POST", {
+    alunoId,
+  });
+
+  showToast(data.message, data.success ? "success" : "error");
+  if (data.success) setTimeout(() => loadAlunos(turmaId), 1000);
+}
+
+async function removeAluno(alunoId) {
+  const s = getSession();
+  if (!s || s.role !== "teacher") {
+    return showToast(
+      "Acesso negado: apenas professores podem remover alunos.",
+      "error"
+    );
+  }
+
+  const turmaId = localStorage.getItem("last_turma_id");
+  if (!confirm("Deseja remover este aluno da turma?")) return;
+
+  const data = await apiRequest(`turmas/${turmaId}/aluno/${alunoId}`, "DELETE");
+  showToast(data.message, data.success ? "success" : "error");
+  if (data.success) setTimeout(() => loadAlunos(turmaId), 1000);
+}
+
+function editClass() {
+  const s = getSession();
+  if (!s || s.role !== "teacher") {
+    return showToast("Apenas professores podem editar turmas.", "error");
+  }
+
+  const turmaId = localStorage.getItem("last_turma_id");
+  if (!turmaId) return showToast("Nenhuma turma ativa.", "error");
+  window.location.href = `/create_class.html?id=${turmaId}`;
+}
+
+async function deleteClass() {
+  const s = getSession();
+  if (!s || s.role !== "teacher") {
+    return showToast("Apenas professores podem excluir turmas.", "error");
+  }
+
+  const turmaId = localStorage.getItem("last_turma_id");
+  if (!turmaId) return showToast("Nenhuma turma ativa.", "error");
+
+  if (
+    !confirm(
+      "Tem certeza que deseja excluir esta turma? Essa ação não pode ser desfeita."
+    )
+  )
+    return;
+
+  const data = await apiRequest(`turmas/${turmaId}`, "DELETE", {
+    userId: s.user_id,
+    role: s.role,
+  });
+
+  if (data.success) {
+    showToast("Turma excluída com sucesso!", "success");
+    localStorage.removeItem("last_turma_id");
+    setTimeout(() => (window.location.href = "/dashboard/teacher"), 1500);
+  } else {
+    console.warn("Erro ao excluir turma:", data);
+    showToast(data.message || "Erro ao excluir turma.", "error");
+  }
+}
+
+/* ==========================
+   RELATÓRIO / EXPORTAÇÃO
+========================== */
+async function generateReport() {
+  const s = getSession();
+  if (!s || s.role !== "teacher") {
+    return showToast("Apenas professores podem gerar relatórios.", "error");
+  }
+
+  const turmaId = localStorage.getItem("last_turma_id");
+  if (!turmaId) return showToast("Nenhuma turma ativa.", "error");
+
+  showToast("Gerando relatório...", "info");
+  try {
+    const data = await apiRequest(`relatorios/turma/${turmaId}/pdf`, "GET");
+    if (data.success && data.pdf_url) {
+      showToast("Relatório gerado com sucesso!", "success");
+      window.open(data.pdf_url, "_blank");
+    } else {
+      showToast(data.message || "Erro ao gerar relatório.", "error");
+    }
+  } catch (err) {
+    console.error("Erro ao gerar relatório:", err);
+    showToast("Erro ao gerar relatório.", "error");
+  }
+}
+
+function exportStudents() {
+  const s = getSession();
+  if (!s || s.role !== "teacher") {
+    return showToast("Apenas professores podem exportar listas.", "error");
+  }
+
+  const rows = [["Nome", "Email", "Frequência", "Média"]];
+  document.querySelectorAll("#studentsTableBody tr").forEach((tr) => {
+    const cols = Array.from(tr.children)
+      .slice(0, 4)
+      .map((td) => td.textContent.trim());
+    if (cols.length) rows.push(cols);
+  });
+
+  const csv = rows.map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "alunos_turma.csv";
+  a.click();
+
+  showToast("Lista exportada com sucesso!", "success");
+}
+
+/* ==========================
+   FILTRO / CÓDIGO / OUTROS
+========================== */
 function filterStudents() {
   const query = document
     .getElementById("searchStudent")
     .value.toLowerCase()
     .trim();
-  const rows = document.querySelectorAll("#studentsTableBody tr");
-
-  rows.forEach((row) => {
-    const name = row.children[0]?.textContent.toLowerCase() || "";
+  document.querySelectorAll("#studentsTableBody tr").forEach((row) => {
+    const name = row.cells[0]?.textContent.toLowerCase() || "";
     row.style.display = name.includes(query) ? "" : "none";
   });
 }
@@ -156,59 +301,22 @@ function filterStudents() {
 function copyCode() {
   const code = document.getElementById("classCode").textContent.trim();
   navigator.clipboard.writeText(code);
-  alert(`Código "${code}" copiado!`);
+  showToast(`Código "${code}" copiado!`, "success");
 }
 
-/* ------------------- Relatórios e Exportação ------------------- */
-async function generateReport() {
-  const turmaId = getQueryParam("id");
-  try {
-    const res = await fetch(`${API_BASE_URL}/relatorios/turma/${turmaId}`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
-
-    const reportText = `
-📊 Relatório da Turma: ${data.nome_turma}
-👥 Alunos: ${data.alunos}
-📚 Atividades: ${data.atividades}
-🏆 Média Geral: ${data.media_geral}
-📈 Frequência Média: ${data.frequencia_media}%
-    `;
-    alert(reportText);
-  } catch (err) {
-    console.error("Erro gerar relatório:", err);
-    alert("Erro ao gerar relatório.");
-  }
-}
-
-function exportStudents() {
-  const rows = [["Nome", "Email", "Frequência", "Média"]];
-  document.querySelectorAll("#studentsTableBody tr").forEach((tr) => {
-    const cols = Array.from(tr.children)
-      .slice(0, 4)
-      .map((td) => td.textContent);
-    rows.push(cols);
-  });
-  const csvContent = rows.map((r) => r.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "alunos_turma.csv";
-  link.click();
-}
-
-/* ------------------- Placeholders (ações futuras) ------------------- */
-function addStudent() {
-  alert("Funcionalidade de adicionar aluno será implementada em breve.");
-}
-
-function editClass() {
-  alert("Edição de turma ainda em desenvolvimento.");
-}
-
-function viewStudent(id) {
-  alert(`Visualizar perfil do aluno ID: ${id}`);
-}
-
-/* ------------------- Init ------------------- */
+/* ==========================
+   INICIALIZAÇÃO
+========================== */
 document.addEventListener("DOMContentLoaded", loadTurma);
+
+/* ==========================
+   EXPORTAÇÕES GLOBAIS
+========================== */
+window.addStudent = addStudent;
+window.removeAluno = removeAluno;
+window.editClass = editClass;
+window.deleteClass = deleteClass;
+window.exportStudents = exportStudents;
+window.generateReport = generateReport;
+window.filterStudents = filterStudents;
+window.copyCode = copyCode;

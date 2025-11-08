@@ -11,6 +11,60 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      /* 💡 Toaster (alert estilizado) */
+      .toast-box {
+        position: fixed;
+        top: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+      }
+
+      .toast {
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-top: 10px;
+        font-family: "Inter", sans-serif;
+        font-weight: 500;
+        transition: opacity 0.3s ease;
+        opacity: 1;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        animation: fadeIn 0.3s ease;
+      }
+
+      .toast.success {
+        background: #27ae60;
+      }
+      .toast.error {
+        background: #e74c3c;
+      }
+      .toast.warning {
+        background: #f1c40f;
+      }
+      .toast.info {
+        background: #3498db;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* 💡 Estado de carregamento do botão */
+      .btn-primary.loading {
+        background: #2980b9 !important;
+        cursor: not-allowed;
+        opacity: 0.8;
+      }
+    </style>
   </head>
   <body>
     <!-- Header -->
@@ -47,7 +101,9 @@
               <h2>Bem-vindo de volta</h2>
               <p>Faça login para acessar sua conta</p>
             </div>
-            <form class="login-form" onsubmit="doLogin(event)">
+
+            <!-- Formulário de Login -->
+            <form id="loginForm" class="login-form" onsubmit="doLogin(event)">
               <div class="form-group">
                 <label for="email">E-mail</label>
                 <input
@@ -57,6 +113,7 @@
                   required
                 />
               </div>
+
               <div class="form-group">
                 <label for="password">Senha</label>
                 <input
@@ -66,6 +123,7 @@
                   required
                 />
               </div>
+
               <div class="form-group">
                 <label for="roleSelect">Entrar como</label>
                 <select id="roleSelect">
@@ -73,14 +131,10 @@
                   <option value="teacher">Professor</option>
                 </select>
               </div>
+
               <div class="form-actions">
-                <button type="submit" class="btn-primary">Entrar</button>
-                <button
-                  type="button"
-                  class="btn-outline"
-                  onclick="presetDemo()"
-                >
-                  Usar demo
+                <button type="submit" class="btn-primary" id="loginBtn">
+                  Entrar
                 </button>
               </div>
             </form>
@@ -97,5 +151,77 @@
     </footer>
 
     <script src="/script.js"></script>
+
+    <script>
+      // 🔄 Efeito de carregamento no botão
+      async function doLogin(event) {
+        event.preventDefault();
+        const btn = document.getElementById("loginBtn");
+        btn.disabled = true;
+        btn.textContent = "Entrando...";
+        btn.classList.add("loading");
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value.trim();
+        const role = document.getElementById("roleSelect").value;
+
+        if (!email || !password || !role) {
+          showToast("Preencha todos os campos.", "error");
+          btn.disabled = false;
+          btn.textContent = "Entrar";
+          btn.classList.remove("loading");
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, role }),
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            localStorage.setItem("tf_user_id", data.user_id);
+            localStorage.setItem("tf_role", data.role);
+            localStorage.setItem("tf_name", data.name);
+
+            showToast("Login realizado com sucesso!", "success");
+            setTimeout(() => {
+              if (data.role === "teacher")
+                window.location.href = "/dashboard_teacher.html";
+              else window.location.href = "/dashboard_student.html";
+            }, 1000);
+          } else showToast(data.message || "Credenciais inválidas", "error");
+        } catch (err) {
+          console.error("Erro no login:", err);
+          showToast("Erro ao conectar com o servidor.", "error");
+        }
+
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+        btn.classList.remove("loading");
+      }
+
+      // 🌟 Alertas estilizados (reutilizam o estilo global)
+      function showToast(msg, type = "info") {
+        let box = document.querySelector(".toast-box");
+        if (!box) {
+          box = document.createElement("div");
+          box.className = "toast-box";
+          document.body.appendChild(box);
+        }
+
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.textContent = msg;
+        box.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 400);
+        }, 2500);
+      }
+    </script>
   </body>
 </html>

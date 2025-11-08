@@ -1,5 +1,6 @@
 from app import create_app
-from models import db
+# MODIFICADO: Importar todos os modelos necessários
+from models import db, User, Material, Turma, AlunoTurma, Tarefa, Resposta
 
 
 def inicializar_banco():

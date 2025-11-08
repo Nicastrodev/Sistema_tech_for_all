@@ -6,7 +6,7 @@ app = create_app()
 with app.app_context():
     if not User.query.filter_by(email="demo@techforall.com").first():
         prof = User(name="Prof. Demo",
-                    email="demo@techforall.com", role="teacher")
+                    email="prof@techforall.com", role="teacher")
         prof.set_password("123456")
         db.session.add(prof)
 

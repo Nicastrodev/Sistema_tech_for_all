@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 from models import db
@@ -11,10 +11,6 @@ load_dotenv()
 
 
 def create_app():
-    """
-    Cria e configura a aplicação Flask.
-    O frontend multipágina está em 'static' e o backend na API centralizada 'routes/api.py'.
-    """
     app = Flask(__name__, static_folder="static", static_url_path="")
     CORS(app)
 
@@ -43,7 +39,7 @@ def create_app():
     app.register_blueprint(api_bp)
 
     # =====================================================
-    # ROTAS DO FRONTEND (PÁGINAS HTML)
+    # ROTAS DO FRONTEND (HTML)
     # =====================================================
     @app.route("/")
     def serve_index():
@@ -94,11 +90,26 @@ def create_app():
         return send_from_directory(app.static_folder, "turma.html")
 
     # =====================================================
-    # ARQUIVOS ESTÁTICOS (CSS, JS, imagens etc.)
+    # REDIRECIONAMENTOS AUTOMÁTICOS (.html → rota correta)
+    # =====================================================
+    @app.route("/<page>.html")
+    def redirect_html(page):
+        """Redireciona URLs com .html para a rota correta."""
+        return redirect(f"/{page}")
+
+    @app.route("/dashboard_teacher.html")
+    def redirect_dashboard_teacher():
+        return redirect("/dashboard/teacher")
+
+    @app.route("/dashboard_student.html")
+    def redirect_dashboard_student():
+        return redirect("/dashboard/student")
+
+    # =====================================================
+    # SERVIR ARQUIVOS ESTÁTICOS (CSS, JS, imagens etc.)
     # =====================================================
     @app.route("/<path:filename>")
     def serve_static_files(filename):
-        """Permite servir arquivos estáticos diretamente da pasta 'static'."""
         return send_from_directory(app.static_folder, filename)
 
     # =====================================================
@@ -117,5 +128,5 @@ def create_app():
 if __name__ == "__main__":
     app = create_app()
     with app.app_context():
-        db.create_all()  # Cria tabelas automaticamente se não existirem
+        db.create_all()
     app.run(host="0.0.0.0", port=5050, debug=True)
