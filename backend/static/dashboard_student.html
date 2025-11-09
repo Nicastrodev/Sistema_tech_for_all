@@ -65,6 +65,64 @@
       .quick-actions button {
         min-width: 200px;
       }
+
+      /* Chat com IA destacado */
+      .chat-section {
+        margin: 40px auto;
+        max-width: 800px;
+        text-align: center;
+        background: linear-gradient(135deg, #4f46e5, #6d28d9);
+        border-radius: 16px;
+        padding: 40px 30px;
+        color: white;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+      }
+
+      .chat-section h3 {
+        font-size: 1.6rem;
+        margin-bottom: 10px;
+      }
+
+      .chat-section p {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 24px;
+      }
+
+      .chat-section button {
+        background: white;
+        color: #4f46e5;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 12px 28px;
+        font-size: 1rem;
+        transition: 0.2s;
+      }
+
+      .chat-section button:hover {
+        background: #f9fafb;
+        transform: scale(1.03);
+      }
+
+      .chat-icon {
+        font-size: 48px;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 0.7;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.15);
+        }
+        100% {
+          opacity: 0.7;
+          transform: scale(1);
+        }
+      }
     </style>
   </head>
 
@@ -128,25 +186,13 @@
         <div class="stats-grid">
           <div
             class="stat-card"
-            onclick="goToActivities()"
             style="cursor: pointer"
+            onclick="goToActivities()"
           >
             <div class="stat-icon orange">📚</div>
             <div class="stat-content">
               <p class="stat-label">Atividades Pendentes</p>
-              <h3 class="stat-value" id="pendingActivities">0</h3>
-            </div>
-          </div>
-
-          <div
-            class="stat-card"
-            onclick="goToChatbot()"
-            style="cursor: pointer"
-          >
-            <div class="stat-icon blue">💬</div>
-            <div class="stat-content">
-              <p class="stat-label">Chat com IA</p>
-              <h3 class="stat-value">Abrir Chatbot</h3>
+              <h3 class="stat-value" id="atividadesPendentes">0</h3>
             </div>
           </div>
 
@@ -154,19 +200,20 @@
             <div class="stat-icon green">📈</div>
             <div class="stat-content">
               <p class="stat-label">Frequência</p>
-              <h3 class="stat-value" id="attendanceValue">0%</h3>
+              <h3 class="stat-value" id="frequenciaAluno">0%</h3>
             </div>
           </div>
         </div>
 
-        <!-- AÇÕES RÁPIDAS -->
-        <div class="quick-actions">
-          <button class="btn-outline" onclick="goToActivities()">
-            📘 Ver Atividades
-          </button>
-          <button class="btn-outline" onclick="goToChatbot()">
-            🤖 Entrar no Chatbot
-          </button>
+        <!-- CHAT COM IA -->
+        <div class="chat-section">
+          <div class="chat-icon">💬</div>
+          <h3>Chat com IA</h3>
+          <p>
+            Tire dúvidas sobre qualquer tema das suas aulas ou atividades. Nossa
+            IA está aqui para te ajudar a estudar melhor!
+          </p>
+          <button onclick="goToChatbot()">Abrir Chat Inteligente</button>
         </div>
 
         <!-- LISTAGEM DE TURMAS -->
@@ -175,7 +222,7 @@
             <h3>Minhas Turmas</h3>
             <p class="subtitle">Visualize as turmas que você participa</p>
           </div>
-          <div class="class-list" id="studentClassList">
+          <div class="class-list" id="classList">
             <p style="color: var(--text-secondary); padding: 20px">
               Carregando turmas...
             </p>
@@ -192,84 +239,14 @@
     </footer>
 
     <script src="/common.js"></script>
+    <script src="/script.js"></script>
     <script>
-      const API_BASE_URL =
-        window.API_BASE_URL || `${window.location.origin}/api`;
-
-      /* ==========================
-         ATIVIDADES PENDENTES DO ALUNO
-      =========================== */
-      async function loadPendingActivities() {
-        const s = getSession();
-        const el = document.getElementById("pendingActivities");
-
-        try {
-          const res = await fetch(
-            `${API_BASE_URL}/dashboard/resumo/aluno?userId=${s.user_id}&role=${s.role}`
-          );
-          const data = await res.json();
-
-          if (data.success) {
-            el.textContent = data.pendentes || 0;
-          } else {
-            el.textContent = "0";
-          }
-        } catch (err) {
-          console.error("Erro ao carregar atividades pendentes:", err);
-          el.textContent = "0";
-        }
-      }
-
       function goToChatbot() {
         window.location.href = "/chat.html";
       }
 
       function goToActivities() {
         window.location.href = "/activities_student.html";
-      }
-
-      /* ==========================
-         CARREGAR TURMAS DO ALUNO
-      =========================== */
-      async function loadStudentClasses() {
-        const s = getSession();
-        const listContainer = document.getElementById("studentClassList");
-
-        listContainer.innerHTML =
-          "<p style='color:var(--text-secondary);padding:20px;'>Carregando turmas...</p>";
-
-        const data = await apiRequest(
-          `turmas?userId=${s.user_id}&role=${s.role}`
-        );
-
-        if (!data.success) {
-          listContainer.innerHTML =
-            "<p style='color:red;padding:20px;'>Erro ao carregar turmas.</p>";
-          return;
-        }
-
-        if (!data.turmas || data.turmas.length === 0) {
-          listContainer.innerHTML =
-            "<p style='color:var(--text-secondary);padding:20px;'>Você ainda não está em nenhuma turma.</p>";
-          return;
-        }
-
-        listContainer.innerHTML = "";
-        data.turmas.forEach((t) => {
-          const div = document.createElement("div");
-          div.className = "class-item";
-          div.innerHTML = `
-            <div class="class-info" onclick="openClass(${
-              t.id
-            })" style="cursor:pointer;">
-              <h4>${escapeHtml(t.nome)}</h4>
-              <p>${escapeHtml(t.descricao || "Ver aulas e atividades")}</p>
-            </div>
-            <button class="btn-outline-small" onclick="openClass(${
-              t.id
-            })">Abrir</button>`;
-          listContainer.appendChild(div);
-        });
       }
 
       async function joinClass(event) {
@@ -292,8 +269,8 @@
             showToast("Você entrou na turma com sucesso!", "success");
             input.value = "";
             setTimeout(() => {
-              loadStudentClasses();
-              loadPendingActivities();
+              loadClasses();
+              loadStudentDashboardSummary();
             }, 1000);
           } else {
             showToast(data.message || "Código inválido.", "error");
@@ -307,11 +284,6 @@
         }
       }
 
-      function openClass(id) {
-        localStorage.setItem("last_turma_id", id);
-        window.location.href = `/turma.html?id=${id}`;
-      }
-
       document.addEventListener("DOMContentLoaded", () => {
         const s = getSession();
         if (!s.user_id || s.role !== "student") {
@@ -322,8 +294,9 @@
         document.getElementById(
           "welcomeNameStudent"
         ).textContent = `Olá, ${s.name} 👋`;
-        loadStudentClasses();
-        loadPendingActivities();
+
+        loadClasses();
+        loadStudentDashboardSummary();
       });
     </script>
   </body>

@@ -3,15 +3,118 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat IA - Tech For All</title>
+    <title>Assistente do Aluno - Tech For All</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      body {
+        background: #f9fafb;
+      }
+
+      .chat-wrapper {
+        max-width: 900px;
+        margin: 40px auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 80vh;
+      }
+
+      .chat-header {
+        background: linear-gradient(135deg, #4f46e5, #6d28d9);
+        color: white;
+        padding: 24px;
+        text-align: center;
+      }
+
+      .chat-header h2 {
+        font-size: 1.6rem;
+        margin: 0;
+      }
+
+      .chat-header p {
+        margin-top: 6px;
+        opacity: 0.9;
+        font-size: 14px;
+      }
+
+      .chat-window {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .chat-message {
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        line-height: 1.4;
+        font-size: 15px;
+        word-break: break-word;
+      }
+
+      .user-message {
+        align-self: flex-end;
+        background: #4f46e5;
+        color: white;
+      }
+
+      .ai-message {
+        align-self: flex-start;
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      .chat-input-container {
+        display: flex;
+        border-top: 1px solid #eee;
+        padding: 14px 16px;
+        background: #fafafa;
+      }
+
+      .chat-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        font-size: 15px;
+      }
+
+      .chat-input:focus {
+        outline: 2px solid #4f46e5;
+      }
+
+      .chat-input-container button {
+        margin-left: 10px;
+        background: #4f46e5;
+        color: white;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 12px 24px;
+        border: none;
+        transition: 0.2s;
+      }
+
+      .chat-input-container button:hover {
+        background: #4338ca;
+      }
+
+      .typing {
+        font-style: italic;
+        opacity: 0.7;
+      }
+    </style>
   </head>
+
   <body>
     <header class="header">
       <div class="header-container">
@@ -35,164 +138,128 @@
           </div>
         </div>
         <div class="header-actions">
-          <div class="role-badge" id="currentRole">Visitante</div>
+          <div class="role-badge" id="currentRole">Aluno</div>
           <button class="btn-secondary" onclick="logout()">Sair</button>
         </div>
       </div>
     </header>
 
-    <main class="main-container">
-      <section class="screen">
-        <div class="form-container">
-          <div class="card">
-            <div class="card-header">
-              <h3>Chat IA - Assistente Virtual</h3>
-              <p>Tire suas dúvidas com nosso assistente inteligente</p>
-            </div>
-            <div class="chat-container">
-              <div id="chatWindow" class="chat-window"></div>
-              <div class="chat-input-container">
-                <input
-                  type="text"
-                  id="chatInput"
-                  placeholder="Digite sua mensagem..."
-                  class="chat-input"
-                />
-                <button class="btn-primary" onclick="sendChat()">Enviar</button>
-              </div>
-            </div>
-          </div>
+    <main>
+      <div class="chat-wrapper">
+        <div class="chat-header">
+          <h2 id="assistantTitle">Assistente do Aluno</h2>
+          <p>
+            Converse com a IA da Tech For All e tire suas dúvidas sobre seus
+            estudos!
+          </p>
         </div>
-      </section>
+
+        <div id="chatWindow" class="chat-window"></div>
+
+        <div class="chat-input-container">
+          <input
+            id="chatInput"
+            class="chat-input"
+            placeholder="Digite sua dúvida aqui..."
+          />
+          <button onclick="sendChat()">Enviar</button>
+        </div>
+      </div>
     </main>
 
     <footer class="footer">
-      <p>
-        &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
-        Acadêmico
-      </p>
+      <p>&copy; 2025 Tech For All | Assistente de Aprendizado IA</p>
     </footer>
 
     <script src="/common.js"></script>
-    <script src="/script.js"></script>
     <script>
-      // Atualiza badge de função
-      document.addEventListener("DOMContentLoaded", function () {
-        const role = sessionStorage.getItem("tf_role");
-        const roleBadge = document.getElementById("currentRole");
-
-        if (role === "teacher") {
-          roleBadge.textContent = "Professor";
-        } else if (role === "student") {
-          roleBadge.textContent = "Aluno";
-        } else {
-          roleBadge.textContent = "Visitante";
-        }
-
-        // Mensagem de boas-vindas
+      document.addEventListener("DOMContentLoaded", () => {
+        const s = getSession();
         const chatWindow = document.getElementById("chatWindow");
-        if (chatWindow && chatWindow.children.length === 0) {
-          const welcomeMessage = document.createElement("div");
-          welcomeMessage.className = "chat-message";
-          welcomeMessage.innerHTML =
-            "<strong>Assistente IA:</strong> Olá! 👋 Sou seu assistente virtual. Como posso ajudar você hoje?";
-          chatWindow.appendChild(welcomeMessage);
-        }
+        const assistantTitle = document.getElementById("assistantTitle");
 
-        // Enter para enviar
-        const chatInput = document.getElementById("chatInput");
-        if (chatInput) {
-          chatInput.addEventListener("keypress", function (e) {
-            if (e.key === "Enter") {
-              sendChat();
-            }
+        const studentName = s.name || "Aluno";
+        assistantTitle.textContent = `Assistente do Aluno - ${studentName}`;
+
+        // Mensagem inicial única (sem respostas prontas)
+        addMessage(
+          "Assistente Tech For All",
+          `Olá, ${studentName}! 👋 Sou o assistente de aprendizado da Tech For All. 
+Estou aqui para te ajudar com seus estudos e dúvidas sobre o sistema. 
+Pode me perguntar qualquer coisa sobre suas atividades, turmas ou conteúdos. 😉`,
+          "ai"
+        );
+
+        document
+          .getElementById("chatInput")
+          .addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendChat();
           });
-        }
       });
 
-      function sendChat() {
+      function addMessage(sender, text, type) {
+        const chatWindow = document.getElementById("chatWindow");
+        const div = document.createElement("div");
+        div.className = `chat-message ${
+          type === "ai" ? "ai-message" : "user-message"
+        }`;
+        div.innerHTML = `<strong>${sender}:</strong> ${escapeHtml(text)}`;
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+
+      async function sendChat() {
         const chatInput = document.getElementById("chatInput");
         const chatWindow = document.getElementById("chatWindow");
         const message = chatInput.value.trim();
 
-        if (!message) {
-          return;
-        }
+        if (!message) return;
 
-        // Adiciona mensagem do usuário
-        const userMessage = document.createElement("div");
-        userMessage.className = "chat-message";
-        userMessage.innerHTML = `<strong>Você:</strong> ${escapeHtml(message)}`;
-        chatWindow.appendChild(userMessage);
-
+        addMessage("Você", message, "user");
         chatInput.value = "";
 
-        // Indicador de digitação
+        // Mostra o "digitando..."
         const typingIndicator = document.createElement("div");
-        typingIndicator.className = "chat-message";
-        typingIndicator.innerHTML =
-          "<strong>Assistente IA:</strong> <em>Digitando...</em>";
+        typingIndicator.className = "chat-message ai-message typing";
+        typingIndicator.innerHTML = `<strong>Assistente Tech For All:</strong> <em>Digitando...</em>`;
         chatWindow.appendChild(typingIndicator);
-
         chatWindow.scrollTop = chatWindow.scrollHeight;
 
-        // Simula resposta
-        setTimeout(() => {
+        try {
+          const s = getSession();
+          const response = await fetch(
+            `${window.location.origin}/api/ia/chat`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                question: message,
+                user: { id: s?.user_id || "anon", name: s?.name || "Aluno" },
+              }),
+            }
+          );
+
+          const data = await response.json();
           typingIndicator.remove();
 
-          const aiMessage = document.createElement("div");
-          aiMessage.className = "chat-message";
-          aiMessage.innerHTML = `<strong>Assistente IA:</strong> ${generateAIResponse(
-            message
-          )}`;
-          chatWindow.appendChild(aiMessage);
-
-          chatWindow.scrollTop = chatWindow.scrollHeight;
-        }, 1500);
-      }
-
-      function generateAIResponse(userMessage) {
-        const lowerMessage = userMessage.toLowerCase();
-
-        if (lowerMessage.includes("ajuda") || lowerMessage.includes("ajudar")) {
-          return "Olá! Estou aqui para ajudar. Você pode me perguntar sobre:\n• Como usar o sistema\n• Tirar dúvidas sobre atividades\n• Sugestões de estudo\n• Recursos disponíveis";
+          if (data.success && data.answer) {
+            addMessage("Assistente Tech For All", data.answer, "ai");
+          } else {
+            addMessage(
+              "Assistente Tech For All",
+              "Desculpe, não consegui entender sua pergunta. Pode tentar de outra forma?",
+              "ai"
+            );
+          }
+        } catch (err) {
+          console.error("Erro no chat:", err);
+          typingIndicator.remove();
+          addMessage(
+            "Assistente Tech For All",
+            "Ocorreu um erro ao se conectar com a IA. Tente novamente em instantes.",
+            "ai"
+          );
         }
-
-        if (
-          lowerMessage.includes("atividade") ||
-          lowerMessage.includes("tarefa")
-        ) {
-          return 'Para gerenciar suas atividades, acesse o menu "Atividades". Lá você pode visualizar prazos, enviar arquivos e receber feedback. Precisa de ajuda com alguma atividade específica?';
-        }
-
-        if (lowerMessage.includes("nota") || lowerMessage.includes("notas")) {
-          return 'Você pode acompanhar suas notas na seção "Notas" do menu. As notas são atualizadas automaticamente após a correção das atividades pelos professores.';
-        }
-
-        if (
-          lowerMessage.includes("prazo") ||
-          lowerMessage.includes("entrega")
-        ) {
-          return "Os prazos de entrega estão disponíveis em cada atividade. Recomendo organizá-los em um calendário pessoal. Quer que eu te ajude a priorizar suas tarefas?";
-        }
-
-        if (
-          lowerMessage.includes("professor") ||
-          lowerMessage.includes("professora")
-        ) {
-          return "Você pode entrar em contato com seus professores através das turmas ou enviando mensagens diretas. Eles costumam responder em até 24 horas.";
-        }
-
-        const genericResponses = [
-          "Interessante questão! Pode me dar mais detalhes para eu poder ajudar melhor?",
-          "Entendo sua dúvida. Que tal explorarmos isso juntos? Me conte mais sobre o que você precisa.",
-          "Ótima pergunta! Para te dar a melhor resposta, preciso entender melhor seu contexto. Pode elaborar?",
-          "Posso ajudar com isso! Vamos por partes: o que especificamente você gostaria de saber?",
-        ];
-
-        return genericResponses[
-          Math.floor(Math.random() * genericResponses.length)
-        ];
       }
     </script>
   </body>

@@ -1,4 +1,6 @@
 # routes/api.py
+from flask import request, jsonify
+import requests
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer
 from reportlab.pdfgen import canvas
@@ -925,3 +927,120 @@ def gerar_relatorio_turma_pdf(turma_id):
     except Exception as e:
         traceback.print_exc()
         return _json_error("Erro ao gerar relatório em PDF.")
+
+
+ # ========================================
+# 🤖 ROTA DE CHAT IA - ASSISTENTE TECH FOR ALL
+# ========================================
+chat_memory = {}  # memória leve por sessão (em RAM)
+
+
+@bp.route("/ia/chat", methods=["POST"])
+def ia_chat():
+    try:
+        data = request.get_json()
+        question = data.get("question", "").strip()
+        user = data.get("user", {})
+        student_id = user.get("id", "anon")
+        student_name = user.get("name", "Aluno")
+
+        if not question:
+            return jsonify({"success": False, "message": "Mensagem vazia."}), 400
+
+        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        if not OPENAI_API_KEY:
+            return jsonify({"success": False, "message": "Chave da OpenAI não configurada."}), 500
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+        }
+
+        # 🧠 Recupera histórico da conversa (máx. 5 mensagens)
+        history = chat_memory.get(student_id, [])
+        history.append({"role": "user", "content": question})
+        history = history[-5:]
+
+        # ===============================
+        # 🎓 Comportamento do Assistente
+        # ===============================
+        system_prompt = f"""
+        Você é o **Assistente Tech For All**, o mentor digital oficial da plataforma Tech For All.
+
+        🧭 Sua missão:
+        Ajudar alunos como {student_name} a aprender e usar o sistema com autonomia e confiança.
+
+        🎯 Funções principais:
+        1️⃣ **Mentor educacional:**  
+           - Ajude o aluno a pensar por conta própria.  
+           - Faça perguntas reflexivas (“O que você acha que aconteceria se...?”).  
+           - Dê dicas graduais e use exemplos simples.  
+           - Corrija erros com gentileza e incentivo.  
+           - Só dê respostas completas se o aluno pedir claramente.
+
+        2️⃣ **Guia da plataforma Tech For All:**  
+           Quando o aluno perguntar sobre o sistema, responda com instruções claras:
+           - “Como entrar em uma turma” → Diga: "Peça o código ao professor e insira-o na seção 'Entrar em uma turma' do seu painel."
+           - “Como ver atividades” → Explique que há uma aba 'Atividades' no painel com todas as tarefas e prazos.
+           - “Como ver notas ou frequência” → Diga que estão disponíveis dentro da turma correspondente.
+           - “Como sair do sistema” → Informe que há um botão “Sair” no canto superior direito.
+           - “O que é a Tech For All” → Responda que é uma plataforma de inclusão digital com foco em aprendizado assistido por IA.
+
+        💬 Estilo de comunicação:
+        - Nunca repita mensagens genéricas de saudação.  
+        - Mantenha o contexto da conversa e continue naturalmente.  
+        - Responda como se fosse uma troca contínua.  
+        - Use um tom amigável, acolhedor e didático.  
+        - Termine respostas longas com um convite à reflexão (“Quer tentar resolver comigo?” ou “Quer que eu te guie passo a passo?”).  
+
+        ⚙️ Observações:
+        - Se já estiver conversando, **não repita frases como “Posso te ajudar com isso?”** — continue o diálogo de forma fluida.
+        - Evite respostas idênticas em sequência.  
+        - Se o aluno mudar de assunto, adapte o tom e continue de forma natural.
+        """
+
+        messages = [{"role": "system", "content": system_prompt}] + history
+
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": messages,
+            "temperature": 0.8,
+        }
+
+        # ===============================
+        # 🚀 Chamada à API OpenAI
+        # ===============================
+        r = requests.post(
+            "https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        if r.status_code != 200:
+            print("❌ Erro na OpenAI:", r.text)
+            return jsonify({"success": False, "message": "Erro ao se comunicar com a IA."}), 500
+
+        resp_json = r.json()
+        answer = resp_json["choices"][0]["message"]["content"]
+
+        # 🔄 Evita repetição de mensagens genéricas
+        if "Posso te ajudar" in answer and len(history) > 2:
+            print(
+                "⚠️ Resposta repetitiva detectada — resetando contexto para o aluno", student_name)
+            history = []  # limpa memória para essa sessão
+
+            # tenta novamente com o mesmo prompt
+            payload["messages"] = [{"role": "system", "content": system_prompt}, {
+                "role": "user", "content": question}]
+            r2 = requests.post(
+                "https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+            if r2.status_code == 200:
+                resp_json = r2.json()
+                answer = resp_json["choices"][0]["message"]["content"]
+
+        # 🧩 Atualiza memória
+        history.append({"role": "assistant", "content": answer})
+        chat_memory[student_id] = history[-5:]
+
+        # ✅ Retorna resposta
+        return jsonify({"success": True, "answer": answer})
+
+    except Exception as e:
+        print("❌ Erro no chat IA:", e)
+        return jsonify({"success": False, "message": str(e)}), 500
