@@ -5,14 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard Aluno - Tech For All</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      /* ==== ESTILO ADICIONAL PARA A ÁREA DE ENTRAR EM TURMA ==== */
+      .join-class-section {
+        display: flex;
+        justify-content: center;
+        margin: 24px 0;
+      }
+
+      .join-card {
+        max-width: 520px;
+        width: 100%;
+        text-align: center;
+        padding: 24px;
+        background: var(--card-bg, #fff);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .join-card h3 {
+        margin-bottom: 8px;
+        color: var(--text-primary, #222);
+      }
+
+      .join-card p {
+        color: var(--text-secondary, #555);
+        font-size: 14px;
+      }
+
+      .join-class-form {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .join-class-form input {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 15px;
+      }
+
+      .join-class-form button {
+        padding: 10px 20px;
+      }
+    </style>
   </head>
+
   <body>
+    <!-- HEADER -->
     <header class="header">
       <div class="header-container">
         <div class="brand">
@@ -41,6 +87,7 @@
       </div>
     </header>
 
+    <!-- MAIN -->
     <main class="main-container">
       <section class="screen" id="dashboard-student">
         <div class="dashboard-header">
@@ -50,23 +97,28 @@
           </div>
         </div>
 
+        <!-- 🔹 ÁREA DE ENTRAR EM TURMA -->
+        <div class="join-class-section">
+          <div class="join-card">
+            <h3>Entrar em uma Turma</h3>
+            <p>Insira o código fornecido pelo seu professor para participar.</p>
+            <form onsubmit="joinClass(event)" class="join-class-form">
+              <input
+                type="text"
+                id="classCodeInput"
+                placeholder="Ex: ABC123"
+                maxlength="10"
+                required
+              />
+              <button type="submit" class="btn-primary">Entrar</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Estatísticas -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon orange">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                ></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-              </svg>
-            </div>
+            <div class="stat-icon orange">📚</div>
             <div class="stat-content">
               <p class="stat-label">Atividades Pendentes</p>
               <h3 class="stat-value" id="pendingActivities">0</h3>
@@ -74,20 +126,7 @@
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon blue">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-                ></path>
-              </svg>
-            </div>
+            <div class="stat-icon blue">💬</div>
             <div class="stat-content">
               <p class="stat-label">Chat IA</p>
               <h3 class="stat-value">Disponível</h3>
@@ -95,21 +134,7 @@
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon green">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <polyline points="9 11 12 14 22 4"></polyline>
-                <path
-                  d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
-                ></path>
-              </svg>
-            </div>
+            <div class="stat-icon green">📈</div>
             <div class="stat-content">
               <p class="stat-label">Frequência</p>
               <h3 class="stat-value" id="attendanceValue">0%</h3>
@@ -117,60 +142,22 @@
           </div>
         </div>
 
-        <div class="content-grid">
-          <div class="main-content">
-            <div class="card">
-              <div class="card-header">
-                <h3>Minhas Turmas</h3>
-              </div>
-              <div class="class-list" id="studentClassList">
-                <p style="color: var(--text-secondary); padding: 20px">
-                  Carregando turmas...
-                </p>
-              </div>
-            </div>
+        <!-- LISTAGEM DE TURMAS -->
+        <div class="card" style="margin-top: 32px">
+          <div class="card-header">
+            <h3>Minhas Turmas</h3>
+            <p class="subtitle">Visualize as turmas que você participa</p>
           </div>
-
-          <aside class="sidebar">
-            <div class="card">
-              <h3>Ações Rápidas</h3>
-              <nav class="sidebar-nav">
-                <a href="/activities_student.html" class="nav-item">
-                  <span class="nav-icon">📋</span>
-                  <span>Atividades</span>
-                </a>
-                <a href="/lessons.html" class="nav-item">
-                  <span class="nav-icon">📚</span>
-                  <span>Aulas</span>
-                </a>
-                <a href="/grades.html" class="nav-item">
-                  <span class="nav-icon">📈</span>
-                  <span>Notas</span>
-                </a>
-                <a href="/chat.html" class="nav-item">
-                  <span class="nav-icon">💬</span>
-                  <span>Chat IA</span>
-                </a>
-              </nav>
-            </div>
-
-            <div class="card" style="margin-top: 20px">
-              <h3>Entrar em Turma</h3>
-              <form class="sidebar-form" onsubmit="joinClass(event)">
-                <input
-                  type="text"
-                  id="classCodeInput"
-                  placeholder="Código da Turma"
-                  required
-                />
-                <button type="submit" class="btn-primary-small">Entrar</button>
-              </form>
-            </div>
-          </aside>
+          <div class="class-list" id="studentClassList">
+            <p style="color: var(--text-secondary); padding: 20px">
+              Carregando turmas...
+            </p>
+          </div>
         </div>
       </section>
     </main>
 
+    <!-- FOOTER -->
     <footer class="footer">
       <p>
         &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
@@ -178,108 +165,107 @@
       </p>
     </footer>
 
+    <!-- JS -->
     <script src="/common.js"></script>
-    <script src="/script.js"></script>
     <script>
-      // Função showToast (simples, caso não esteja em script.js)
-      function showToast(message, type = "info") {
-        if (typeof showToast === "function") {
-          showToast(message, type); // Tenta usar a global
-        } else {
-          alert(message); // Fallback
+      /* ==========================
+         CARREGAR TURMAS DO ALUNO
+      =========================== */
+      async function loadStudentClasses() {
+        const s = getSession();
+        const listContainer = document.getElementById("studentClassList");
+
+        listContainer.innerHTML =
+          "<p style='color:var(--text-secondary);padding:20px;'>Carregando turmas...</p>";
+
+        const data = await apiRequest(
+          `turmas?userId=${s.user_id}&role=${s.role}`
+        );
+
+        if (!data.success) {
+          listContainer.innerHTML =
+            "<p style='color:red;padding:20px;'>Erro ao carregar turmas.</p>";
+          return;
+        }
+
+        if (!data.turmas || data.turmas.length === 0) {
+          listContainer.innerHTML =
+            "<p style='color:var(--text-secondary);padding:20px;'>Você ainda não está em nenhuma turma.</p>";
+          return;
+        }
+
+        listContainer.innerHTML = "";
+        data.turmas.forEach((t) => {
+          const div = document.createElement("div");
+          div.className = "class-item";
+          div.innerHTML = `
+            <div class="class-info" onclick="openClass(${
+              t.id
+            })" style="cursor:pointer;">
+              <h4>${escapeHtml(t.nome)}</h4>
+              <p>${escapeHtml(t.descricao || "Ver aulas e atividades")}</p>
+            </div>
+            <button class="btn-outline-small" onclick="openClass(${
+              t.id
+            })">Abrir</button>`;
+          listContainer.appendChild(div);
+        });
+      }
+
+      /* ==========================
+         ENTRAR NA TURMA
+      =========================== */
+      async function joinClass(event) {
+        event.preventDefault();
+        const input = document.getElementById("classCodeInput");
+        const codigo = input.value.trim().toUpperCase();
+
+        if (!codigo) return showToast("Digite o código da turma.", "error");
+
+        const btn = event.target.querySelector("button");
+        btn.disabled = true;
+        btn.textContent = "Entrando...";
+
+        try {
+          const data = await apiRequest("turmas/entrar", "POST", {
+            codigo_acesso: codigo,
+          });
+
+          if (data.success) {
+            showToast("Você entrou na turma com sucesso!", "success");
+            input.value = "";
+            setTimeout(() => loadStudentClasses(), 1000);
+          } else {
+            showToast(data.message || "Código inválido.", "error");
+          }
+        } catch (err) {
+          console.error("Erro ao entrar na turma:", err);
+          showToast("Erro ao conectar com o servidor.", "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Entrar";
         }
       }
 
-      document.addEventListener("DOMContentLoaded", async () => {
+      /* ==========================
+         ABRIR TURMA
+      =========================== */
+      function openClass(id) {
+        localStorage.setItem("last_turma_id", id);
+        window.location.href = `/turma.html?id=${id}`;
+      }
+
+      /* ==========================
+         INICIALIZAÇÃO
+      =========================== */
+      document.addEventListener("DOMContentLoaded", () => {
         const s = getSession();
         if (!s.user_id || s.role !== "student") {
           window.location.href = "/";
           return;
         }
-
-        const listContainer = document.getElementById("studentClassList");
-        listContainer.innerHTML =
-          "<p style='color:var(--text-secondary);padding:20px;'>Carregando turmas...</p>";
-
-        try {
-          const res = await fetch(
-            `/api/turmas?userId=${s.user_id}&role=${s.role}`
-          );
-          const data = await res.json();
-
-          if (!data.success || !data.turmas.length) {
-            listContainer.innerHTML =
-              "<p style='color:var(--text-secondary);padding:20px;'>Você ainda não está em nenhuma turma.</p>";
-            return;
-          }
-
-          listContainer.innerHTML = "";
-          data.turmas.forEach((t) => {
-            const div = document.createElement("div");
-            div.className = "class-item";
-            div.innerHTML = `
-              <div class="class-info">
-                <h4>${escapeHtml(t.nome)}</h4>
-                <p>${escapeHtml(t.descricao || "Ver aulas • Atividades")}</p>
-              </div>
-              <button class="btn-outline-small" onclick="window.location.href='/turma.html?id=${
-                t.id
-              }'">
-                Abrir
-              </button>
-            `;
-            listContainer.appendChild(div);
-          });
-        } catch (err) {
-          console.error("Erro ao carregar turmas:", err);
-          listContainer.innerHTML =
-            "<p style='color:red;padding:20px;'>Erro ao carregar turmas.</p>";
-        }
+        loadStudentClasses();
       });
-
-      // NOVA FUNÇÃO PARA ENTRAR NA TURMA
-      async function joinClass(event) {
-        event.preventDefault();
-        const s = getSession();
-        const input = document.getElementById("classCodeInput");
-        const codigo = input.value.trim().toUpperCase();
-
-        if (!codigo) {
-          return showToast("Digite o código da turma.", "error");
-        }
-
-        const button = event.target.querySelector("button");
-        button.disabled = true;
-        button.textContent = "Aguarde...";
-
-        try {
-          const res = await fetch("/api/turmas/entrar", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-User-Id": s.user_id,
-              "X-User-Role": s.role,
-            },
-            body: JSON.stringify({ codigo_acesso: codigo }),
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            throw new Error(data.message || "Erro ao entrar na turma.");
-          }
-
-          showToast(data.message, "success");
-          input.value = "";
-          // Recarregar a lista de turmas (ou a página inteira)
-          setTimeout(() => window.location.reload(), 1500);
-        } catch (err) {
-          console.error("Erro ao entrar na turma:", err);
-          showToast(err.message, "error");
-        } finally {
-          button.disabled = false;
-          button.textContent = "Entrar";
-        }
-      }
     </script>
   </body>
 </html>

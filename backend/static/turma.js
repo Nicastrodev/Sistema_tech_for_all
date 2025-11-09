@@ -12,7 +12,7 @@ function getQueryParam(param) {
 }
 
 /* ==========================
-   CARREGAR TURMA
+   CARREGAR TURMA (CORRIGIDA)
 ========================== */
 async function loadTurma() {
   const turmaId = getQueryParam("id") || localStorage.getItem("last_turma_id");
@@ -38,22 +38,24 @@ async function loadTurma() {
     }
 
     const turma = data.turma;
-    document.getElementById("breadcrumbClassName").textContent = turma.nome;
-    document.getElementById("className").textContent = turma.nome;
-    document.getElementById("classNameDetail").textContent = turma.nome;
-    document.getElementById("classDescription").textContent =
-      turma.descricao || "Sem descrição";
-    document.getElementById("classCode").textContent =
-      turma.codigo_acesso || "-----";
+
+    // Função auxiliar para evitar erro caso o elemento não exista
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    setText("breadcrumbClassName", turma.nome);
+    setText("className", turma.nome);
+    setText("classNameDetail", turma.nome);
+    setText("classDescription", turma.descricao || "Sem descrição");
+    setText("classCode", turma.codigo_acesso || "-----");
 
     // Atualiza dados estatísticos
     const total = turma.total_alunos || 0;
-    document.getElementById("totalStudents").textContent = total;
-    document.getElementById("averageGrade").textContent = (
-      turma.media_geral || 0
-    ).toFixed(1);
-    document.getElementById("averageAttendance").textContent =
-      (turma.frequencia_media || 0) + "%";
+    setText("totalStudents", total);
+    setText("averageGrade", (turma.media_geral || 0).toFixed(1));
+    setText("averageAttendance", (turma.frequencia_media || 0) + "%");
 
     // Atualiza papel no header
     const roleBadge = document.getElementById("currentRole");
@@ -66,6 +68,7 @@ async function loadTurma() {
           : "Visitante";
     }
 
+    // Carrega alunos da turma
     await loadAlunos(turmaId);
   } catch (err) {
     console.error("Erro ao carregar turma:", err);
@@ -78,6 +81,7 @@ async function loadTurma() {
 ========================== */
 async function loadAlunos(turmaId) {
   const tbody = document.getElementById("studentsTableBody");
+  if (!tbody) return;
   tbody.innerHTML = `
     <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary)">
       Carregando alunos...
@@ -95,7 +99,7 @@ async function loadAlunos(turmaId) {
 
     if (!data.alunos || data.alunos.length === 0) {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">
-        Nenhum aluno encontrado.
+        Nenhum aluno encontrado nesta turma.
       </td></tr>`;
       return;
     }
@@ -138,9 +142,13 @@ async function loadAlunos(turmaId) {
 
     // Atualiza estatísticas apenas se professor
     if (isTeacher) {
-      document.getElementById("approvedCount").textContent = aprovados;
-      document.getElementById("recoveryCount").textContent = recuperacao;
-      document.getElementById("failedCount").textContent = reprovados;
+      const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+      setText("approvedCount", aprovados);
+      setText("recoveryCount", recuperacao);
+      setText("failedCount", reprovados);
     }
   } catch (err) {
     console.error("Erro ao carregar alunos:", err);
@@ -156,10 +164,7 @@ async function loadAlunos(turmaId) {
 async function addStudent() {
   const s = getSession();
   if (!s || s.role !== "teacher") {
-    return showToast(
-      "Acesso negado: apenas professores podem adicionar alunos.",
-      "error"
-    );
+    return showToast("Apenas professores podem adicionar alunos.", "error");
   }
 
   const turmaId = localStorage.getItem("last_turma_id");
@@ -177,10 +182,7 @@ async function addStudent() {
 async function removeAluno(alunoId) {
   const s = getSession();
   if (!s || s.role !== "teacher") {
-    return showToast(
-      "Acesso negado: apenas professores podem remover alunos.",
-      "error"
-    );
+    return showToast("Apenas professores podem remover alunos.", "error");
   }
 
   const turmaId = localStorage.getItem("last_turma_id");
@@ -193,13 +195,17 @@ async function removeAluno(alunoId) {
 
 function editClass() {
   const s = getSession();
-  if (!s || s.role !== "teacher") {
-    return showToast("Apenas professores podem editar turmas.", "error");
+  if (!s) {
+    return showToast("Sessão expirada. Faça login novamente.", "error");
   }
 
   const turmaId = localStorage.getItem("last_turma_id");
-  if (!turmaId) return showToast("Nenhuma turma ativa.", "error");
-  window.location.href = `/create_class.html?id=${turmaId}`;
+  if (!turmaId) {
+    return showToast("Nenhuma turma ativa encontrada.", "error");
+  }
+
+  // ✅ Redireciona diretamente para a página de edição
+  window.location.href = `/create_class?id=${turmaId}`;
 }
 
 async function deleteClass() {
@@ -256,7 +262,7 @@ async function generateReport() {
     }
   } catch (err) {
     console.error("Erro ao gerar relatório:", err);
-    showToast("Erro ao gerar relatório.", "error");
+    showToast("Erro ao gerar relatório. Verifique o servidor.", "error");
   }
 }
 
@@ -288,10 +294,8 @@ function exportStudents() {
    FILTRO / CÓDIGO / OUTROS
 ========================== */
 function filterStudents() {
-  const query = document
-    .getElementById("searchStudent")
-    .value.toLowerCase()
-    .trim();
+  const query =
+    document.getElementById("searchStudent")?.value.toLowerCase().trim() || "";
   document.querySelectorAll("#studentsTableBody tr").forEach((row) => {
     const name = row.cells[0]?.textContent.toLowerCase() || "";
     row.style.display = name.includes(query) ? "" : "none";
@@ -299,10 +303,19 @@ function filterStudents() {
 }
 
 function copyCode() {
-  const code = document.getElementById("classCode").textContent.trim();
+  const code = document.getElementById("classCode")?.textContent.trim();
+  if (!code) return;
   navigator.clipboard.writeText(code);
   showToast(`Código "${code}" copiado!`, "success");
 }
+
+/* ==========================
+   ATUALIZAÇÃO AUTOMÁTICA
+========================== */
+setInterval(() => {
+  const turmaId = localStorage.getItem("last_turma_id");
+  if (turmaId) loadAlunos(turmaId);
+}, 15000); // Atualiza a lista de alunos a cada 15 segundos
 
 /* ==========================
    INICIALIZAÇÃO

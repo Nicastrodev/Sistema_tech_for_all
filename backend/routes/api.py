@@ -1,31 +1,24 @@
 # routes/api.py
-from flask import Blueprint, request, jsonify, current_app, send_from_directory
+from flask import Blueprint, request, jsonify, send_from_directory
 from models import db, User, Turma, AlunoTurma, Tarefa, Resposta
-from werkzeug.security import check_password_hash
-from calcular_notas import calcular_media_notas
-from functools import wraps
 from datetime import datetime
-import werkzeug
+import os
 import random
 import string
-import os
-
-# PDF
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.units import cm
-from reportlab.pdfgen import canvas
-from reportlab.platypus import Table, TableStyle
+import traceback
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# --------------------
-# Auxiliares
-# --------------------
+# =====================================================
+# AUXILIARES
+# =====================================================
+
+
 def _get_user_by_id(user_id):
-    """Busca usuário pelo ID, aceita int/str e retorna None se inválido."""
-    if user_id is None:
+    if not user_id:
         return None
     try:
         return User.query.get(int(user_id))
@@ -34,705 +27,646 @@ def _get_user_by_id(user_id):
 
 
 def _extract_userid_and_role_from_request():
-    """
-    Tenta extrair user_id e role das fontes possíveis:
-    1) Headers X-User-Id / X-User-Role
-    2) Query params userId / role
-    3) JSON body userId / role
-    Retorna tuple (user_id_or_None, role_or_None)
-    """
-    # 1) headers
     user_id = request.headers.get("X-User-Id")
     role = request.headers.get("X-User-Role")
 
-    # 2) fallback query / body
     if not user_id or not role:
         data = request.get_json(silent=True) or {}
-        if not user_id:
-            user_id = data.get("userId") or request.args.get("userId")
-        if not role:
-            role = data.get("role") or request.args.get("role")
+        user_id = user_id or request.args.get("userId") or data.get("userId")
+        role = role or request.args.get("role") or data.get("role")
 
-    # normalize empty strings to None
     if user_id == "":
         user_id = None
     if role == "":
         role = None
+    if role:
+        role = role.lower().strip()
 
     return user_id, role
 
 
-# --------------------
-# Decorator: requer role
-# --------------------
-def require_role(required_role):
-    def decorator(f):
-        @wraps(f)
-        def wrapped(*args, **kwargs):
-            user_id, role = _extract_userid_and_role_from_request()
-
-            if not user_id or not role:
-                return jsonify({"success": False, "message": "Sem autenticação."}), 401
-
-            user = _get_user_by_id(user_id)
-            if not user:
-                return jsonify({"success": False, "message": "Usuário não encontrado."}), 404
-            if user.role != required_role:
-                return jsonify({"success": False, "message": f"Acesso permitido apenas para '{required_role}'."}), 403
-
-            request.current_user = user
-            return f(*args, **kwargs)
-        return wrapped
-    return decorator
+def save_uploaded_file(file):
+    """Salva o arquivo e retorna o nome gerado"""
+    if not file:
+        return None
+    safe_name = file.filename.replace(" ", "_")
+    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{safe_name}"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+    return filename
 
 
-# --------------------
-# Login
-# --------------------
+def _json_error(message, status=500):
+    return jsonify({"success": False, "message": message}), status
+
+
+# =====================================================
+# LOGIN
+# =====================================================
 @bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json() or {}
-    email = data.get("email")
-    password = data.get("password")
-    role = data.get("role")
-
-    if not email or not password or not role:
-        return jsonify({"success": False, "message": "Preencha todos os campos."}), 400
-
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        return jsonify({"success": False, "message": "Usuário não encontrado."}), 404
-    if user.role != role:
-        return jsonify({"success": False, "message": "Tipo de conta incorreto."}), 403
-    if not user.check_password(password):
-        return jsonify({"success": False, "message": "Senha incorreta."}), 401
-
-    return jsonify({"success": True, "role": user.role, "user_id": user.id, "name": user.name}), 200
-
-
-# ===========================
-# TURMAS - criação / leitura / edição / exclusão
-# ===========================
-
-@bp.route("/turmas", methods=["POST"])
-@require_role("teacher")
-def criar_turma():
-    """Cria uma nova turma"""
     try:
         data = request.get_json() or {}
-        nome = data.get("nome")
-        descricao = data.get("descricao")
-        professor = request.current_user  # obtido via decorator
+        email = data.get("email")
+        password = data.get("password")
+        role = (data.get("role") or "").lower()
 
-        if not nome:
-            return jsonify({"success": False, "message": "O nome da turma é obrigatório."}), 400
+        if not email or not password or not role:
+            return _json_error("Preencha todos os campos.", 400)
 
-        codigo_acesso = ''.join(random.choices(
-            string.ascii_uppercase + string.digits, k=5))
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return _json_error("Usuário não encontrado.", 404)
+        if user.role.lower() != role:
+            return _json_error("Tipo de conta incorreto.", 403)
+        if not user.check_password(password):
+            return _json_error("Senha incorreta.", 401)
 
-        nova_turma = Turma(
-            nome=nome,
-            descricao=descricao,
-            codigo_acesso=codigo_acesso,
-            professor_id=professor.id
-        )
-        db.session.add(nova_turma)
-        db.session.commit()
-
-        print(
-            f"✅ Turma criada: id={nova_turma.id}, nome='{nova_turma.nome}', professor_id={professor.id}")
         return jsonify({
             "success": True,
-            "turma_id": nova_turma.id,
-            "codigo_acesso": nova_turma.codigo_acesso,
-            "message": f"Turma '{nome}' criada com sucesso!"
-        }), 201
-    except Exception as e:
-        db.session.rollback()
-        print("❌ Erro ao criar turma:", e)
-        return jsonify({"success": False, "message": "Erro ao criar turma."}), 500
+            "role": user.role,
+            "user_id": user.id,
+            "name": user.name
+        }), 200
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro interno ao processar login.")
 
 
+# =====================================================
+# TURMAS
+# =====================================================
 @bp.route("/turmas", methods=["GET"])
 def listar_turmas():
-    """Lista turmas do professor / aluno ou todas"""
-    # Debug: imprimir headers/args para ajudar a diagnosticar problemas no front
     try:
-        print(">>> /api/turmas request.headers:", dict(request.headers))
-        print(">>> /api/turmas request.args:", request.args.to_dict())
-    except Exception:
-        pass
-
-    # Extrai userId/role de headers, query ou body
-    user_id_raw = request.args.get("userId") or request.headers.get(
-        "X-User-Id") or (request.get_json(silent=True) or {}).get("userId")
-    role = request.args.get("role") or request.headers.get(
-        "X-User-Role") or (request.get_json(silent=True) or {}).get("role")
-
-    try:
-        # converte user_id para int se possível
-        try:
-            user_id = int(user_id_raw) if user_id_raw is not None and str(
-                user_id_raw).isdigit() else None
-        except Exception:
-            user_id = None
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+        if not user:
+            return _json_error("Usuário não autenticado.", 403)
 
         turmas = []
-        if role == "teacher" and user_id:
-            turmas = Turma.query.filter_by(professor_id=user_id).all()
-        elif role == "student" and user_id:
-            relacoes = AlunoTurma.query.filter_by(aluno_id=user_id).all()
-            turmas = [rel.turma for rel in relacoes if rel.turma]
-        else:
-            # Se role não informada: devolve vazio (evita listar tudo por segurança)
-            turmas = []
+        if role == "teacher":
+            turmas = Turma.query.filter_by(professor_id=user.id).all()
+        elif role == "student":
+            relacoes = AlunoTurma.query.filter_by(aluno_id=user.id).all()
+            turmas = [r.turma for r in relacoes if r.turma]
 
         turmas_data = []
         for t in turmas:
-            try:
-                turmas_data.append({
-                    "id": t.id,
-                    "nome": t.nome,
-                    "descricao": t.descricao,
-                    "codigo_acesso": t.codigo_acesso,
-                    "professor_nome": getattr(t.professor, "name", None),
-                    "num_alunos": t.alunos_assoc.count() if hasattr(t, "alunos_assoc") else 0
-                })
-            except Exception as e:
-                print(
-                    f"Erro processando turma {getattr(t, 'id', 'unknown')}: {e}")
+            total_tarefas = Tarefa.query.filter_by(turma_id=t.id).count()
+            turmas_data.append({
+                "id": t.id,
+                "nome": t.nome,
+                "descricao": t.descricao,
+                "codigo_acesso": t.codigo_acesso,
+                "professor_nome": getattr(t.professor, "name", None),
+                "quantidade_atividades": total_tarefas
+            })
 
-        print(
-            f"📘 listar_turmas -> user_id={user_id}, role={role}, count={len(turmas_data)}")
         return jsonify({"success": True, "turmas": turmas_data}), 200
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao listar turmas.")
+
+    # =====================================================
+# ATUALIZAR TURMA (EDITAR)
+# =====================================================
+
+
+@bp.route("/turmas/<int:turma_id>", methods=["PUT"])
+def atualizar_turma(turma_id):
+    """
+    Atualiza nome e descrição de uma turma existente.
+    Somente o professor que criou a turma pode editá-la.
+    """
+    try:
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+
+        if not user or role != "teacher":
+            return _json_error("Apenas professores podem editar turmas.", 403)
+
+        turma = Turma.query.get(turma_id)
+        if not turma:
+            return _json_error("Turma não encontrada.", 404)
+
+        # Verifica se o professor é o dono da turma
+        if turma.professor_id != user.id:
+            return _json_error("Você não tem permissão para editar esta turma.", 403)
+
+        data = request.get_json() or {}
+        nome = data.get("nome", "").strip()
+        descricao = data.get("descricao", "").strip()
+
+        if not nome:
+            return _json_error("O nome da turma é obrigatório.", 400)
+
+        turma.nome = nome
+        turma.descricao = descricao
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Turma atualizada com sucesso!",
+            "turma": {
+                "id": turma.id,
+                "nome": turma.nome,
+                "descricao": turma.descricao,
+                "codigo_acesso": turma.codigo_acesso
+            }
+        }), 200
+
     except Exception as e:
-        print("❌ Erro listar turmas:", e)
-        return jsonify({"success": False, "message": "Erro interno ao listar turmas."}), 500
+        traceback.print_exc()
+        return _json_error("Erro ao atualizar turma.")
+
+# =====================================================
+# EXCLUIR TURMA (professor)
+# =====================================================
+
+
+@bp.route("/turmas/<int:turma_id>", methods=["DELETE"])
+def excluir_turma(turma_id):
+    try:
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+
+        if not user or role != "teacher":
+            return _json_error("Apenas professores podem excluir turmas.", 403)
+
+        turma = Turma.query.get(turma_id)
+        if not turma:
+            return _json_error("Turma não encontrada.", 404)
+
+        # garantir que o professor dono da turma é quem está excluindo
+        if turma.professor_id != user.id:
+            return _json_error("Você não tem permissão para excluir esta turma.", 403)
+
+        # excluir todas as relações e tarefas associadas antes da turma
+        AlunoTurma.query.filter_by(turma_id=turma.id).delete()
+        tarefas = Tarefa.query.filter_by(turma_id=turma.id).all()
+        for tarefa in tarefas:
+            # excluir respostas associadas
+            Resposta.query.filter_by(tarefa_id=tarefa.id).delete()
+            db.session.delete(tarefa)
+
+        db.session.delete(turma)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Turma excluída com sucesso!"}), 200
+
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao excluir turma.")
+
+
+@bp.route("/turmas/entrar", methods=["POST"])
+def entrar_turma():
+    try:
+        user_id, role = _extract_userid_and_role_from_request()
+        data = request.get_json() or {}
+        codigo = (data.get("codigo") or data.get(
+            "codigo_acesso") or "").strip().upper()
+
+        if not user_id or not role:
+            return _json_error("Usuário não autenticado.", 403)
+
+        if role != "student":
+            return _json_error("Apenas alunos podem entrar em turmas.", 403)
+
+        if not codigo:
+            return _json_error("O código de acesso é obrigatório.", 400)
+
+        aluno = _get_user_by_id(user_id)
+        if not aluno:
+            return _json_error("Aluno não encontrado.", 404)
+
+        turma = Turma.query.filter_by(codigo_acesso=codigo).first()
+        if not turma:
+            return _json_error("Código de turma inválido.", 404)
+
+        # Verifica se o aluno já está nessa turma
+        if AlunoTurma.query.filter_by(aluno_id=aluno.id, turma_id=turma.id).first():
+            return jsonify({"success": False, "message": "Você já está nessa turma."}), 400
+
+        # Cria o vínculo aluno-turma
+        nova_relacao = AlunoTurma(aluno_id=aluno.id, turma_id=turma.id)
+        db.session.add(nova_relacao)
+        db.session.commit()
+
+        # Coleta alunos atualizados
+        relacoes = AlunoTurma.query.filter_by(turma_id=turma.id).all()
+        alunos_data = []
+        for rel in relacoes:
+            al = User.query.get(rel.aluno_id)
+            if al:
+                alunos_data.append({
+                    "id": al.id,
+                    "nome": al.name,
+                    "email": al.email
+                })
+
+        return jsonify({
+            "success": True,
+            "message": f"Você entrou na turma '{turma.nome}' com sucesso!",
+            "turma": {
+                "id": turma.id,
+                "nome": turma.nome,
+                "codigo": turma.codigo_acesso,
+                "descricao": turma.descricao
+            },
+            "alunos": alunos_data
+        }), 200
+
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro interno ao entrar na turma.")
+
+# =====================================================
+# DETALHES DA TURMA (USADO NA PÁGINA /turma)
+# =====================================================
 
 
 @bp.route("/turmas/<int:turma_id>", methods=["GET"])
 def obter_turma(turma_id):
-    """Detalhes de uma turma"""
     try:
         turma = Turma.query.get(turma_id)
         if not turma:
-            return jsonify({"success": False, "message": "Turma não encontrada."}), 404
+            return _json_error("Turma não encontrada.", 404)
 
-        alunos_assoc = AlunoTurma.query.filter_by(turma_id=turma.id).all()
-        total_alunos = len(alunos_assoc)
+        # alunos da turma
+        alunos_rel = AlunoTurma.query.filter_by(turma_id=turma.id).all()
+        total_alunos = len(alunos_rel)
 
-        respostas = Resposta.query.join(Tarefa, Tarefa.id == Resposta.tarefa_id).filter(
-            Tarefa.turma_id == turma.id).all()
+        # média geral das notas dessa turma
+        respostas = (
+            Resposta.query.join(Tarefa, Tarefa.id == Resposta.tarefa_id)
+            .filter(Tarefa.turma_id == turma.id, Resposta.nota != None)
+            .all()
+        )
         notas = [r.nota for r in respostas if r.nota is not None]
         media_geral = round(sum(notas) / len(notas), 1) if notas else 0.0
 
-        frequencias = [a.frequencia for a in alunos_assoc if getattr(
-            a, "frequencia", None) is not None]
-        freq_media = round(sum(frequencias) / len(frequencias),
-                           1) if frequencias else 100.0
+        # contar atividades da turma
+        total_tarefas = Tarefa.query.filter_by(turma_id=turma.id).count()
 
-        turma_data = {
-            "id": turma.id,
-            "nome": turma.nome,
-            "descricao": turma.descricao,
-            "codigo_acesso": turma.codigo_acesso,
-            "professor_nome": getattr(turma.professor, "name", "Desconhecido"),
-            "total_alunos": total_alunos,
-            "media_geral": media_geral,
-            "frequencia_media": freq_media
-        }
-        return jsonify({"success": True, "turma": turma_data}), 200
-    except Exception as e:
-        print("Erro ao obter turma:", e)
-        return jsonify({"success": False, "message": "Erro ao carregar turma."}), 500
+        # lista completa dos alunos
+        alunos_data = []
+        for rel in alunos_rel:
+            aluno = User.query.get(rel.aluno_id)
+            if aluno:
+                alunos_data.append({
+                    "id": aluno.id,
+                    "nome": aluno.name,
+                    "email": aluno.email,
+                    "data_entrada": rel.created_at.isoformat() if hasattr(rel, "created_at") else None
+                })
 
+        # 🔹 estrutura JSON compatível com o frontend antigo
+        return jsonify({
+            "success": True,
+            "turma": {
+                "id": turma.id,
+                "nome": turma.nome,
+                "descricao": turma.descricao,
+                "codigo_acesso": turma.codigo_acesso,
+                "professor_nome": getattr(turma.professor, "name", "Desconhecido"),
+                "total_alunos": total_alunos,
+                "media_geral": media_geral,
+                "total_tarefas": total_tarefas
+            },
+            "alunos": alunos_data   # <-- fora de "turma" para o front encontrar
+        }), 200
 
-@bp.route("/turmas/entrar", methods=["POST"])
-@require_role("student")
-def entrar_turma():
-    """Aluno entra em turma usando código de acesso"""
-    try:
-        aluno = request.current_user
-        data = request.get_json() or {}
-        codigo = (data.get("codigo_acesso") or data.get(
-            "codigo") or data.get("code") or "").upper()
-        if not codigo:
-            return jsonify({"success": False, "message": "Código é obrigatório."}), 400
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao carregar detalhes da turma.")
 
-        turma = Turma.query.filter_by(codigo_acesso=codigo).first()
-        if not turma:
-            return jsonify({"success": False, "message": "Turma não encontrada."}), 404
-
-        existe = AlunoTurma.query.filter_by(
-            aluno_id=aluno.id, turma_id=turma.id).first()
-        if existe:
-            return jsonify({"success": False, "message": "Você já está nessa turma."}), 400
-
-        assoc = AlunoTurma(aluno_id=aluno.id, turma_id=turma.id)
-        db.session.add(assoc)
-        db.session.commit()
-        return jsonify({"success": True, "message": f"Você entrou na turma '{turma.nome}' com sucesso!", "turma_id": turma.id}), 200
-    except Exception as e:
-        db.session.rollback()
-        print("Erro entrar turma:", e)
-        return jsonify({"success": False, "message": "Erro ao entrar na turma."}), 500
+   # =====================================================
+# LISTAR ALUNOS DE UMA TURMA (painel do professor ou aluno)
+# =====================================================
 
 
-@bp.route("/turmas/<int:turma_id>/adicionar_aluno", methods=["POST"])
-@require_role("teacher")
-def adicionar_aluno(turma_id):
+@bp.route("/turmas/<int:turma_id>/alunos", methods=["GET"])
+def listar_alunos_turma(turma_id):
     try:
         turma = Turma.query.get(turma_id)
         if not turma:
-            return jsonify({"success": False, "message": "Turma não encontrada."}), 404
+            return _json_error("Turma não encontrada.", 404)
 
-        data = request.get_json() or {}
-        aluno_id = data.get("aluno_id") or data.get("alunoId")
-        aluno = User.query.get(aluno_id)
-        if not aluno or aluno.role != "student":
-            return jsonify({"success": False, "message": "Aluno inválido."}), 400
+        relacoes = AlunoTurma.query.filter_by(turma_id=turma_id).all()
+        alunos_data = []
 
-        existe = AlunoTurma.query.filter_by(
-            aluno_id=aluno.id, turma_id=turma.id).first()
-        if existe:
-            return jsonify({"success": False, "message": "Aluno já está na turma."}), 400
+        for rel in relacoes:
+            aluno = User.query.get(rel.aluno_id)
+            if not aluno:
+                continue
 
-        novo = AlunoTurma(aluno_id=aluno.id, turma_id=turma.id)
-        db.session.add(novo)
-        db.session.commit()
-        return jsonify({"success": True, "message": "Aluno adicionado!"}), 200
-    except Exception as e:
-        db.session.rollback()
-        print("Erro adicionar aluno:", e)
-        return jsonify({"success": False, "message": "Erro ao adicionar aluno."}), 500
+            # Calcula média das notas do aluno nesta turma
+            respostas = (
+                Resposta.query.join(Tarefa, Tarefa.id == Resposta.tarefa_id)
+                .filter(
+                    Tarefa.turma_id == turma_id,
+                    Resposta.aluno_id == aluno.id,
+                    Resposta.nota.isnot(None)
+                )
+                .all()
+            )
+            notas = [r.nota for r in respostas if r.nota is not None]
+            media = round(sum(notas) / len(notas), 1) if notas else 0.0
 
+            alunos_data.append({
+                "id": aluno.id,
+                "nome": aluno.name,
+                "email": aluno.email,
+                "media": media,
+                "frequencia": 0  # placeholder até a presença ser implementada
+            })
 
-@bp.route("/turmas/<int:turma_id>", methods=["PUT"])
-@require_role("teacher")
-def editar_turma(turma_id):
-    try:
-        turma = Turma.query.get(turma_id)
-        if not turma:
-            return jsonify({"success": False, "message": "Turma não encontrada."}), 404
+        return jsonify({"success": True, "alunos": alunos_data}), 200
 
-        if turma.professor_id != request.current_user.id:
-            return jsonify({"success": False, "message": "Acesso negado."}), 403
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao listar alunos da turma.")
 
-        data = request.get_json() or {}
-        turma.nome = data.get("nome", turma.nome)
-        turma.descricao = data.get("descricao", turma.descricao)
-        db.session.commit()
-        return jsonify({"success": True, "message": "Turma atualizada."}), 200
-    except Exception as e:
-        db.session.rollback()
-        print("Erro editar turma:", e)
-        return jsonify({"success": False, "message": "Erro ao editar turma."}), 500
+# =====================================================
+# TAREFAS / ATIVIDADES
+# =====================================================
 
 
-@bp.route("/turmas/<int:turma_id>", methods=["DELETE"])
-@require_role("teacher")
-def deletar_turma(turma_id):
-    try:
-        turma = Turma.query.get(turma_id)
-        if not turma:
-            return jsonify({"success": False, "message": "Turma não encontrada."}), 404
-
-        if turma.professor_id != request.current_user.id:
-            return jsonify({"success": False, "message": "Acesso negado."}), 403
-
-        # Deletar associações, respostas e tarefas antes (cascata)
-        AlunoTurma.query.filter_by(turma_id=turma.id).delete()
-        tarefas_ids = [t.id for t in Tarefa.query.filter_by(
-            turma_id=turma.id).all()]
-        if tarefas_ids:
-            Resposta.query.filter(Resposta.tarefa_id.in_(
-                tarefas_ids)).delete(synchronize_session=False)
-            Tarefa.query.filter_by(turma_id=turma.id).delete()
-
-        db.session.delete(turma)
-        db.session.commit()
-        return jsonify({"success": True, "message": "Turma excluída."}), 200
-    except Exception as e:
-        db.session.rollback()
-        print("Erro deletar turma:", e)
-        return jsonify({"success": False, "message": "Erro ao excluir turma."}), 500
-
-
-@bp.route("/turmas/<int:turma_id>/aluno/<int:aluno_id>", methods=["DELETE"])
-@require_role("teacher")
-def remover_aluno(turma_id, aluno_id):
-    try:
-        turma = Turma.query.get(turma_id)
-        if not turma or turma.professor_id != request.current_user.id:
-            return jsonify({"success": False, "message": "Acesso negado."}), 403
-
-        rel = AlunoTurma.query.filter_by(
-            turma_id=turma_id, aluno_id=aluno_id).first()
-        if not rel:
-            return jsonify({"success": False, "message": "Aluno não encontrado na turma."}), 404
-
-        db.session.delete(rel)
-        db.session.commit()
-        return jsonify({"success": True, "message": "Aluno removido."}), 200
-    except Exception as e:
-        db.session.rollback()
-        print("Erro remover aluno:", e)
-        return jsonify({"success": False, "message": "Erro ao remover aluno."}), 500
-
-
-# ===========================
-# TAREFAS / RESPOSTAS / UPLOADS
-# ===========================
 @bp.route("/tarefas", methods=["POST"])
-@require_role("teacher")
 def criar_tarefa():
     try:
-        data = request.get_json() or {}
-        titulo = data.get("titulo")
-        descricao = data.get("descricao")
-        prazo = data.get("prazo")
-        turma_id = data.get("turma_id")
-        professor = request.current_user
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+        if not user or role != "teacher":
+            return _json_error("Apenas professores podem criar atividades.", 403)
 
-        if not titulo or not prazo or not turma_id:
-            return jsonify({"success": False, "message": "Turma, título e prazo são obrigatórios."}), 400
+        titulo = request.form.get("titulo")
+        descricao = request.form.get("descricao")
+        prazo = request.form.get("prazo")
+        turma_id = request.form.get("turma_id")
+        link = request.form.get("link")
+        arquivo = request.files.get("arquivo")
+
+        if not titulo or not turma_id:
+            return _json_error("Título e turma são obrigatórios.", 400)
 
         turma = Turma.query.get(turma_id)
-        if not turma or turma.professor_id != professor.id:
-            return jsonify({"success": False, "message": "Turma inválida ou não pertence a você."}), 403
+        if not turma:
+            return _json_error("Turma não encontrada.", 404)
 
-        nova = Tarefa(
+        filename = save_uploaded_file(arquivo) if arquivo else None
+
+        tarefa = Tarefa(
             titulo=titulo,
             descricao=descricao,
-            data_entrega=datetime.strptime(prazo, "%Y-%m-%d").date(),
-            turma_id=turma_id,
-            criado_por=professor.id
+            data_entrega=datetime.strptime(
+                prazo, "%Y-%m-%d") if prazo else None,
+            turma_id=turma.id,
+            criado_por=user.id,
+            link=link,
+            arquivo=filename
         )
-        db.session.add(nova)
+
+        db.session.add(tarefa)
         db.session.commit()
-        return jsonify({"success": True, "message": "Atividade publicada!", "tarefa_id": nova.id}), 201
-    except Exception as e:
-        db.session.rollback()
-        print("Erro criar tarefa:", e)
-        return jsonify({"success": False, "message": "Erro ao criar tarefa."}), 500
+
+        return jsonify({"success": True, "message": "Atividade criada com sucesso!"}), 201
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao criar atividade.")
 
 
-@bp.route("/tarefas", methods=["GET"])
-def listar_tarefas():
-    user_id_raw = request.args.get("userId") or request.headers.get(
-        "X-User-Id") or (request.get_json(silent=True) or {}).get("userId")
-    role = request.args.get("role") or request.headers.get(
-        "X-User-Role") or (request.get_json(silent=True) or {}).get("role")
-
-    try:
-        try:
-            user_id = int(user_id_raw) if user_id_raw is not None and str(
-                user_id_raw).isdigit() else None
-        except Exception:
-            user_id = None
-
-        if not user_id or not role:
-            return jsonify({"success": False, "message": "Autenticação necessária."}), 401
-
-        if role == "teacher":
-            tarefas = Tarefa.query.filter_by(criado_por=user_id).order_by(
-                Tarefa.data_entrega.desc()).all()
-        elif role == "student":
-            turmas_aluno_ids = [
-                assoc.turma_id for assoc in AlunoTurma.query.filter_by(aluno_id=user_id).all()]
-            if not turmas_aluno_ids:
-                return jsonify({"success": True, "tarefas": []}), 200
-            tarefas = Tarefa.query.filter(Tarefa.turma_id.in_(
-                turmas_aluno_ids)).order_by(Tarefa.data_entrega.desc()).all()
-        else:
-            return jsonify({"success": False, "message": "Função desconhecida."}), 400
-
-        tarefas_data = [{"id": t.id, "titulo": t.titulo, "descricao": t.descricao,
-                         "prazo": t.data_entrega.isoformat() if t.data_entrega else None} for t in tarefas]
-        return jsonify({"success": True, "tarefas": tarefas_data}), 200
-    except Exception as e:
-        print("Erro listar tarefas:", e)
-        return jsonify({"success": False, "message": "Erro ao listar tarefas."}), 500
-
-
+# =====================================================
+# ENVIO DE RESPOSTA (ALUNO)
+# =====================================================
 @bp.route("/tarefas/<int:tarefa_id>/responder", methods=["POST"])
-@require_role("student")
 def responder_tarefa(tarefa_id):
-    aluno = request.current_user
-    tarefa = Tarefa.query.get(tarefa_id)
-    if not tarefa:
-        return jsonify({"success": False, "message": "Tarefa não encontrada."}), 404
-
-    assoc = AlunoTurma.query.filter_by(
-        aluno_id=aluno.id, turma_id=tarefa.turma_id).first()
-    if not assoc:
-        return jsonify({"success": False, "message": "Você não pertence à turma desta atividade."}), 403
-
-    if 'file' not in request.files and not request.form.get("conteudo"):
-        return jsonify({"success": False, "message": "Nenhum arquivo ou conteúdo enviado."}), 400
-
     try:
-        file = request.files.get("file")
-        uploads = current_app.config.get("UPLOAD_FOLDER", "uploads")
-        os.makedirs(uploads, exist_ok=True)
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+        if not user or role != "student":
+            return _json_error("Apenas alunos podem enviar respostas.", 403)
 
-        filename = None
-        if file and file.filename:
-            safe_name = werkzeug.utils.secure_filename(file.filename)
-            timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-            filename = f"T{tarefa_id}_A{aluno.id}_{timestamp}_{safe_name}"
-            file.save(os.path.join(uploads, filename))
+        tarefa = Tarefa.query.get(tarefa_id)
+        if not tarefa:
+            return _json_error("Atividade não encontrada.", 404)
 
-        conteudo_resposta = filename or request.form.get("conteudo")
+        arquivo = request.files.get("arquivo")
+        comentario = request.form.get("comentario", "")
+
+        if not arquivo and not comentario:
+            return _json_error("Envie um arquivo ou comentário.", 400)
+
+        filename = save_uploaded_file(arquivo) if arquivo else None
+
         resposta = Resposta.query.filter_by(
-            tarefa_id=tarefa.id, aluno_id=aluno.id).first()
+            tarefa_id=tarefa.id, aluno_id=user.id).first()
         if not resposta:
-            resposta = Resposta(tarefa_id=tarefa.id, aluno_id=aluno.id)
-            db.session.add(resposta)
+            resposta = Resposta(tarefa_id=tarefa.id, aluno_id=user.id)
 
-        resposta.conteudo = conteudo_resposta
+        resposta.conteudo = filename or ""
+        resposta.comentario = comentario
         resposta.enviado_em = datetime.utcnow()
+
+        db.session.add(resposta)
         db.session.commit()
-        return jsonify({"success": True, "message": "Envio realizado com sucesso.", "resposta_id": resposta.id}), 201
-    except Exception as e:
-        db.session.rollback()
-        print("Erro ao salvar resposta:", e)
-        return jsonify({"success": False, "message": "Erro ao enviar a resposta."}), 500
+
+        return jsonify({"success": True, "message": "Atividade enviada com sucesso!"}), 200
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao enviar atividade.")
 
 
-@bp.route("/uploads/<path:filename>", methods=["GET"])
-def serve_upload(filename):
-    uploads = current_app.config.get("UPLOAD_FOLDER", "uploads")
-    if "relatorio_" in filename:
-        return send_from_directory(os.path.join(uploads, "relatorios"), filename)
-    return send_from_directory(uploads, filename)
-
-
-@bp.route("/tarefas/entregas", methods=["GET"])
-@require_role("teacher")
-def listar_entregas():
-    professor = request.current_user
+# =====================================================
+# PROFESSOR AVALIA RESPOSTAS
+# =====================================================
+@bp.route("/tarefas/<int:resposta_id>/avaliar", methods=["POST"])
+def avaliar_entrega(resposta_id):
     try:
-        tarefas_ids = [t.id for t in Tarefa.query.filter_by(
-            criado_por=professor.id).all()]
-        if not tarefas_ids:
-            return jsonify({"success": True, "entregas": []}), 200
+        user_id, role = _extract_userid_and_role_from_request()
+        if role != "teacher":
+            return _json_error("Apenas professores podem avaliar.", 403)
 
-        respostas = Resposta.query.filter(Resposta.tarefa_id.in_(
-            tarefas_ids)).order_by(Resposta.enviado_em.desc()).all()
+        data = request.get_json() or {}
+        nota = data.get("nota")
+        if nota is None:
+            return _json_error("Nota é obrigatória.", 400)
+
+        resposta = Resposta.query.get(resposta_id)
+        if not resposta:
+            return _json_error("Entrega não encontrada.", 404)
+
+        resposta.nota = float(nota)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Nota registrada com sucesso!"}), 200
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao registrar nota.")
+
+
+# =====================================================
+# LISTAR ENTREGAS (PROFESSOR)
+# =====================================================
+@bp.route("/tarefas/entregas", methods=["GET"])
+def listar_entregas():
+    try:
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+        if not user or role != "teacher":
+            return _json_error("Acesso negado.", 403)
+
+        tarefas_ids = [t.id for t in Tarefa.query.filter_by(
+            criado_por=user.id).all()]
+        respostas = Resposta.query.filter(Resposta.tarefa_id.in_(tarefas_ids)).order_by(
+            Resposta.enviado_em.desc()
+        ).all()
+
         entregas = []
         for r in respostas:
             aluno = User.query.get(r.aluno_id)
             tarefa = Tarefa.query.get(r.tarefa_id)
-            arquivo_nome = os.path.basename(r.conteudo) if r.conteudo else None
-            arquivo_url = f"{request.host_url}api/uploads/{arquivo_nome}" if arquivo_nome else None
             entregas.append({
                 "id": r.id,
-                "aluno_nome": aluno.name if aluno else "Aluno desconhecido",
-                "tarefa_titulo": tarefa.titulo if tarefa else None,
-                "arquivo_nome": arquivo_nome,
-                "arquivo_url": arquivo_url,
-                "data_envio": r.enviado_em.isoformat() if r.enviado_em else None,
-                "nota": r.nota
+                "aluno_nome": aluno.name if aluno else "Aluno",
+                "tarefa_titulo": tarefa.titulo if tarefa else "Atividade",
+                "comentario": r.comentario,
+                "nota": r.nota,
+                "arquivo_url": f"{request.host_url}api/uploads/{r.conteudo}" if r.conteudo else None,
+                "data_envio": r.enviado_em.isoformat() if r.enviado_em else None
             })
+
         return jsonify({"success": True, "entregas": entregas}), 200
-    except Exception as e:
-        print("Erro listar entregas:", e)
-        return jsonify({"success": False, "message": "Erro ao listar entregas."}), 500
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao listar entregas.")
 
 
-@bp.route("/tarefas/<int:resposta_id>/avaliar", methods=["POST"])
-@require_role("teacher")
-def avaliar_resposta(resposta_id):
-    professor = request.current_user
-    data = request.get_json() or {}
-    nota = data.get("nota")
-    if nota is None:
-        return jsonify({"success": False, "message": "Nota obrigatória."}), 400
-
-    resposta = Resposta.query.get(resposta_id)
-    if not resposta:
-        return jsonify({"success": False, "message": "Resposta não encontrada."}), 404
-
-    tarefa = Tarefa.query.get(resposta.tarefa_id)
-    if not tarefa or tarefa.criado_por != professor.id:
-        return jsonify({"success": False, "message": "Acesso negado."}), 403
-
+# =====================================================
+# LISTAR TAREFAS (ALUNO E PROFESSOR)
+# =====================================================
+@bp.route("/tarefas/listar", methods=["GET"])
+def listar_tarefas():
     try:
-        resposta.nota = float(nota)
-        db.session.commit()
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+        if not user:
+            return _json_error("Usuário não autenticado.", 403)
 
-        turma_id = tarefa.turma_id
-        respostas_aluno_turma = Resposta.query.join(Tarefa).filter(
-            Resposta.aluno_id == resposta.aluno_id, Tarefa.turma_id == turma_id).all()
+        tarefas = []
+        if role == "teacher":
+            tarefas = Tarefa.query.filter_by(criado_por=user.id).order_by(
+                Tarefa.created_at.desc()).all()
+        elif role == "student":
+            turmas_ids = [r.turma_id for r in AlunoTurma.query.filter_by(
+                aluno_id=user.id).all()]
+            if turmas_ids:
+                tarefas = Tarefa.query.filter(Tarefa.turma_id.in_(
+                    turmas_ids)).order_by(Tarefa.created_at.desc()).all()
 
-        notas = [r.nota for r in respostas_aluno_turma if r.nota is not None]
-        resultado = calcular_media_notas(notas, -1)
-        media = resultado.get("media", 0.0)
+        tarefas_data = []
+        for t in tarefas:
+            turma = Turma.query.get(t.turma_id)
+            resposta = Resposta.query.filter_by(
+                tarefa_id=t.id, aluno_id=user.id).first()
+            tarefas_data.append({
+                "id": t.id,
+                "titulo": t.titulo,
+                "descricao": t.descricao,
+                "prazo": t.data_entrega.isoformat() if t.data_entrega else None,
+                "turma_nome": turma.nome if turma else None,
+                "arquivo": t.arquivo,
+                "link": t.link,
+                "entregue": bool(resposta),
+                "data_envio": resposta.enviado_em.isoformat() if resposta else None
+            })
 
-        aluno_assoc = AlunoTurma.query.filter_by(
-            aluno_id=resposta.aluno_id, turma_id=turma_id).first()
-        if aluno_assoc:
-            aluno_assoc.media = media
-            db.session.commit()
-
-        return jsonify({"success": True, "message": "Nota registrada.", "media_atual": media}), 200
-    except Exception as e:
-        db.session.rollback()
-        print("Erro avaliar:", e)
-        return jsonify({"success": False, "message": "Erro ao atribuir nota."}), 500
+        return jsonify({"success": True, "tarefas": tarefas_data}), 200
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao listar tarefas.")
 
 
-# ===========================
-# MATERIAIS
-# ===========================
-@bp.route("/materiais", methods=["POST"])
-@require_role("teacher")
-def publicar_material():
-    professor = request.current_user
-    titulo = request.form.get("titulo")
-    descricao = request.form.get("descricao")
-    file = request.files.get("arquivo")
-
-    if not titulo:
-        return jsonify({"success": False, "message": "O título é obrigatório."}), 400
-
+# =====================================================
+# SERVIR UPLOADS
+# =====================================================
+@bp.route("/uploads/<path:filename>", methods=["GET"])
+def serve_upload(filename):
     try:
-        uploads = current_app.config.get("UPLOAD_FOLDER", "uploads")
-        os.makedirs(uploads, exist_ok=True)
-        arquivo_path = None
-        if file and file.filename:
-            filename = werkzeug.utils.secure_filename(file.filename)
-            timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-            save_name = f"M_{professor.id}_{timestamp}_{filename}"
-            file.save(os.path.join(uploads, save_name))
-            arquivo_path = save_name
+        return send_from_directory(UPLOAD_FOLDER, filename)
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Arquivo não encontrado.", 404)
 
-        from models import Material
-        material = Material(titulo=titulo, descricao=descricao,
-                            arquivo=arquivo_path, professor_id=professor.id)
-        db.session.add(material)
-        db.session.commit()
-
-        try:
-            material_data = material.to_dict(request.host_url)
-        except Exception:
-            material_data = {"id": material.id,
-                             "titulo": material.titulo, "arquivo": arquivo_path}
-
-        return jsonify({"success": True, "message": "Material publicado com sucesso!", "material": material_data}), 201
-    except Exception as e:
-        db.session.rollback()
-        print("Erro publicar material:", e)
-        return jsonify({"success": False, "message": "Erro ao publicar material."}), 500
+    # =====================================================
+# DASHBOARD PROFESSOR - CONTAGEM DE TURMAS E ATIVIDADES
+# =====================================================
 
 
-@bp.route("/materiais", methods=["GET"])
-def listar_materiais():
+@bp.route("/dashboard/resumo", methods=["GET"])
+def resumo_dashboard_professor():
     try:
-        from models import Material
-        materiais = Material.query.order_by(
-            Material.data_publicacao.desc()).all()
-        result = []
-        for m in materiais:
-            try:
-                result.append(m.to_dict(request.host_url))
-            except Exception:
-                result.append(
-                    {"id": m.id, "titulo": m.titulo, "arquivo": m.arquivo})
-        return jsonify({"success": True, "materiais": result}), 200
-    except Exception as e:
-        print("Erro ao listar materiais:", e)
-        return jsonify({"success": False, "message": "Erro ao listar materiais."}), 500
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+
+        if not user or role != "teacher":
+            return _json_error("Acesso negado.", 403)
+
+        total_turmas = Turma.query.filter_by(professor_id=user.id).count()
+        total_tarefas = (
+            Tarefa.query.join(Turma)
+            .filter(Turma.professor_id == user.id)
+            .count()
+        )
+
+        return jsonify({
+            "success": True,
+            "turmas": total_turmas,
+            "atividades": total_tarefas
+        }), 200
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao carregar resumo do dashboard.")
 
 
-# ===========================
-# RELATÓRIO PDF
-# ===========================
-@bp.route("/relatorios/turma/<int:turma_id>/pdf", methods=["GET"])
-@require_role("teacher")
-def gerar_relatorio_pdf(turma_id):
-    professor = request.current_user
-    turma = Turma.query.get(turma_id)
-    if not turma:
-        return jsonify({"success": False, "message": "Turma não encontrada."}), 404
-    if turma.professor_id != professor.id:
-        return jsonify({"success": False, "message": "Você não é o responsável por esta turma."}), 403
-
+# =====================================================
+# DASHBOARD ALUNO - TURMAS INSCRITAS E ATIVIDADES PENDENTES
+# =====================================================
+@bp.route("/dashboard/resumo/aluno", methods=["GET"])
+def resumo_dashboard_aluno():
     try:
-        alunos_assoc = turma.alunos_assoc.all()
-        if not alunos_assoc:
-            return jsonify({"success": False, "message": "Nenhum aluno encontrado nesta turma."}), 404
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
 
-        uploads_dir = os.path.join(current_app.config.get(
-            "UPLOAD_FOLDER", "uploads"), "relatorios")
-        os.makedirs(uploads_dir, exist_ok=True)
+        if not user or role != "student":
+            return _json_error("Acesso negado.", 403)
 
-        filename = f"relatorio_turma_{turma.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-        filepath = os.path.join(uploads_dir, filename)
+        # Contar turmas em que o aluno está matriculado
+        total_turmas = (
+            TurmaAluno.query.filter_by(aluno_id=user.id).count()
+        )
 
-        c = canvas.Canvas(filepath, pagesize=A4)
-        width, height = A4
+        # Contar atividades pendentes (tarefas em turmas onde o aluno está inscrito e sem entrega)
+        subquery_turmas = db.session.query(
+            TurmaAluno.turma_id).filter_by(aluno_id=user.id)
+        total_pendentes = (
+            Tarefa.query
+            .filter(Tarefa.turma_id.in_(subquery_turmas))
+            .filter(~TarefaEntrega.query.filter(
+                (TarefaEntrega.tarefa_id == Tarefa.id) &
+                (TarefaEntrega.aluno_id == user.id)
+            ).exists())
+            .count()
+        )
 
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(2 * cm, height - 2 * cm,
-                     "Relatório Acadêmico - Tech For All")
-        c.setFont("Helvetica", 11)
-        c.drawString(2 * cm, height - 3 * cm, f"Turma: {turma.nome}")
-        c.drawString(2 * cm, height - 3.6 * cm, f"Professor: {professor.name}")
-        c.drawString(2 * cm, height - 4.2 * cm,
-                     f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-
-        data = [["Aluno", "Média", "Situação"]]
-        medias = []
-        aprovados = recuperacao = reprovados = 0
-
-        for assoc in alunos_assoc:
-            aluno = User.query.get(assoc.aluno_id)
-            respostas = Resposta.query.join(Tarefa).filter(
-                Tarefa.turma_id == turma.id, Resposta.aluno_id == assoc.aluno_id).all()
-            notas = [r.nota for r in respostas if r.nota is not None]
-
-            resultado = calcular_media_notas(notas, -1)
-            media = round(resultado.get("media", 0.0), 2)
-            situacao = resultado.get("situacao", "Sem notas")
-
-            medias.append(media)
-            if situacao == "Aprovado":
-                aprovados += 1
-            elif situacao == "Recuperação":
-                recuperacao += 1
-            else:
-                reprovados += 1
-
-            data.append(
-                [aluno.name if aluno else "Aluno desconhecido", str(media), situacao])
-
-        media_geral = round(sum(medias) / len(medias), 2) if medias else 0.0
-        data.append(["", "", ""])
-        data.append(["Média geral da turma", str(media_geral), ""])
-        data.append(["Aprovados", str(aprovados), ""])
-        data.append(["Recuperação", str(recuperacao), ""])
-        data.append(["Reprovados", str(reprovados), ""])
-
-        table = Table(data, colWidths=[9 * cm, 3 * cm, 4 * cm])
-        table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2E86C1")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
-        ]))
-
-        table.wrapOn(c, width, height)
-        table.drawOn(c, 2 * cm, height - (len(data) + 7) * 0.6 * cm)
-        c.showPage()
-        c.save()
-
-        file_url = f"{request.host_url}api/uploads/{filename}"
-        return jsonify({"success": True, "message": "Relatório gerado com sucesso.", "pdf_url": file_url}), 200
-    except Exception as e:
-        print("Erro gerar PDF:", e)
-        return jsonify({"success": False, "message": "Erro ao gerar relatório PDF."}), 500
+        return jsonify({
+            "success": True,
+            "turmas": total_turmas,
+            "pendentes": total_pendentes
+        }), 200
+    except Exception:
+        traceback.print_exc()
+        return _json_error("Erro ao carregar resumo do dashboard do aluno.")

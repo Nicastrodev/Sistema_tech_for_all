@@ -922,3 +922,6 @@ textarea {
 .toast.error {
   background: #dc2626;
 }
+.hidden {
+  display: none !important;
+}

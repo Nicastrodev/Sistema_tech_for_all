@@ -1,8 +1,8 @@
 import os
-from flask import Flask, send_from_directory, redirect
+from flask import Flask, send_from_directory, redirect, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from models import db
+from models import db, Turma, AlunoTurma
 
 # =====================================================
 # CARREGAR VARIÁVEIS DE AMBIENTE
@@ -39,6 +39,50 @@ def create_app():
     app.register_blueprint(api_bp)
 
     # =====================================================
+    # ROTA EXTRA: ENTRAR EM TURMA (para alunos)
+    # =====================================================
+    @app.route("/api/turmas/entrar", methods=["POST"])
+    def entrar_turma():
+        """Permite que um aluno entre em uma turma usando o código."""
+        from models import Turma, TurmaAluno
+
+        user_id = request.headers.get("X-User-Id")
+        role = request.headers.get("X-User-Role")
+        data = request.get_json() or {}
+        codigo = data.get("codigo_acesso")
+
+        # 🔒 Verificação de autenticação
+        if not user_id or not role:
+            return jsonify({"success": False, "message": "Usuário não autenticado."}), 403
+
+        if role != "student":
+            return jsonify({"success": False, "message": "Apenas alunos podem entrar em turmas."}), 403
+
+        if not codigo:
+            return jsonify({"success": False, "message": "Código de turma não informado."}), 400
+
+        turma = Turma.query.filter_by(codigo_acesso=codigo).first()
+        if not turma:
+            return jsonify({"success": False, "message": "Código de turma inválido."}), 404
+
+        # Verifica se o aluno já está na turma
+        ja_existe = TurmaAluno.query.filter_by(
+            aluno_id=user_id, turma_id=turma.id).first()
+        if ja_existe:
+            return jsonify({"success": False, "message": "Você já está nesta turma."}), 400
+
+        # Cria o vínculo aluno-turma
+        nova_relacao = TurmaAluno(aluno_id=user_id, turma_id=turma.id)
+        db.session.add(nova_relacao)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Você entrou na turma '{turma.nome}' com sucesso!",
+            "turma": {"id": turma.id, "nome": turma.nome}
+        }), 200
+
+    # =====================================================
     # ROTAS DO FRONTEND (HTML)
     # =====================================================
     @app.route("/")
@@ -66,6 +110,7 @@ def create_app():
         return send_from_directory(app.static_folder, "activities_teacher.html")
 
     @app.route("/activities/student")
+    @app.route("/activities_student")
     def serve_activities_student():
         return send_from_directory(app.static_folder, "activities_student.html")
 
