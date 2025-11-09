@@ -85,7 +85,7 @@
                 <button
                   type="button"
                   class="btn-outline"
-                  onclick="window.location.href='/dashboard_teacher.html'"
+                  onclick="window.location.href='/dashboard/teacher'"
                 >
                   Cancelar
                 </button>
@@ -100,8 +100,11 @@
       <p>&copy; 2025 Tech For All | Protótipo Acadêmico</p>
     </footer>
 
-    <script src="/script.js"></script>
+    <script src="/common.js"></script>
     <script>
+      const API_BASE_URL =
+        window.API_BASE_URL || `${window.location.origin}/api`;
+
       /* ==========================
          MODAL ESTILIZADO (TOAST)
       =========================== */
@@ -174,7 +177,7 @@
           return;
         }
 
-        // Se for edição, muda textos e preenche dados
+        // ===== EDIÇÃO DE TURMA =====
         if (turmaId) {
           document.getElementById("formTitle").textContent = "Editar Turma";
           document.getElementById("formSubtitle").textContent =
@@ -185,24 +188,35 @@
           try {
             const res = await fetch(`${API_BASE_URL}/turmas/${turmaId}`);
             const data = await res.json();
+
             if (data.success && data.turma) {
-              document.getElementById("className").value = data.turma.nome;
+              const turma = data.turma;
+              document.getElementById("className").value = turma.nome || "";
               document.getElementById("classDesc").value =
-                data.turma.descricao || "";
-              document.getElementById("classCodeDisplay").textContent =
-                data.turma.codigo_acesso;
-              document.getElementById("codeDisplay").style.display = "block";
+                turma.descricao || "";
+              if (turma.codigo_acesso) {
+                document.getElementById("classCodeDisplay").textContent =
+                  turma.codigo_acesso;
+                document.getElementById("codeDisplay").style.display = "block";
+              }
+            } else {
+              showModal({
+                title: "Erro",
+                message:
+                  data.message ||
+                  "Não foi possível carregar os dados da turma.",
+              });
             }
           } catch (e) {
             console.error("Erro ao carregar turma:", e);
             showModal({
               title: "Erro",
-              message: "Não foi possível carregar os dados da turma.",
+              message: "Falha ao conectar com o servidor.",
             });
           }
         }
 
-        // Evento de submit (criar ou atualizar)
+        // ===== SALVAR / ATUALIZAR =====
         form.addEventListener("submit", async (e) => {
           e.preventDefault();
 
@@ -216,10 +230,12 @@
             });
 
           const method = turmaId ? "PUT" : "POST";
-          const endpoint = turmaId ? `/turmas/${turmaId}` : "/turmas";
+          const endpoint = turmaId
+            ? `${API_BASE_URL}/turmas/${turmaId}`
+            : `${API_BASE_URL}/turmas`;
 
           try {
-            const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const res = await fetch(endpoint, {
               method,
               headers: {
                 "Content-Type": "application/json",
@@ -228,17 +244,19 @@
               },
               body: JSON.stringify({ nome, descricao }),
             });
+
             const data = await res.json();
 
             if (data.success) {
-              showModal({
-                title: "Sucesso 🎉",
-                message: turmaId
-                  ? "Turma atualizada com sucesso!"
-                  : `Turma "${nome}" criada!\n\nCódigo: ${data.codigo_acesso}`,
-              });
+              const msg = turmaId
+                ? "Turma atualizada com sucesso!"
+                : `Turma "${nome}" criada!\n\nCódigo: ${
+                    data.codigo_acesso || "(gerado automaticamente)"
+                  }`;
+              showModal({ title: "Sucesso 🎉", message: msg });
+
               setTimeout(
-                () => (window.location.href = "/dashboard_teacher.html"),
+                () => (window.location.href = "/dashboard/teacher"),
                 2000
               );
             } else {

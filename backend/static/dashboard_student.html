@@ -10,7 +10,6 @@
       rel="stylesheet"
     />
     <style>
-      /* ==== ESTILO ADICIONAL PARA A ÁREA DE ENTRAR EM TURMA ==== */
       .join-class-section {
         display: flex;
         justify-content: center;
@@ -54,11 +53,22 @@
       .join-class-form button {
         padding: 10px 20px;
       }
+
+      .quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: center;
+        margin: 32px 0;
+      }
+
+      .quick-actions button {
+        min-width: 200px;
+      }
     </style>
   </head>
 
   <body>
-    <!-- HEADER -->
     <header class="header">
       <div class="header-container">
         <div class="brand">
@@ -87,7 +97,6 @@
       </div>
     </header>
 
-    <!-- MAIN -->
     <main class="main-container">
       <section class="screen" id="dashboard-student">
         <div class="dashboard-header">
@@ -97,7 +106,7 @@
           </div>
         </div>
 
-        <!-- 🔹 ÁREA DE ENTRAR EM TURMA -->
+        <!-- ENTRAR EM TURMA -->
         <div class="join-class-section">
           <div class="join-card">
             <h3>Entrar em uma Turma</h3>
@@ -115,9 +124,13 @@
           </div>
         </div>
 
-        <!-- Estatísticas -->
+        <!-- ESTATÍSTICAS -->
         <div class="stats-grid">
-          <div class="stat-card">
+          <div
+            class="stat-card"
+            onclick="goToActivities()"
+            style="cursor: pointer"
+          >
             <div class="stat-icon orange">📚</div>
             <div class="stat-content">
               <p class="stat-label">Atividades Pendentes</p>
@@ -125,11 +138,15 @@
             </div>
           </div>
 
-          <div class="stat-card">
+          <div
+            class="stat-card"
+            onclick="goToChatbot()"
+            style="cursor: pointer"
+          >
             <div class="stat-icon blue">💬</div>
             <div class="stat-content">
-              <p class="stat-label">Chat IA</p>
-              <h3 class="stat-value">Disponível</h3>
+              <p class="stat-label">Chat com IA</p>
+              <h3 class="stat-value">Abrir Chatbot</h3>
             </div>
           </div>
 
@@ -140,6 +157,16 @@
               <h3 class="stat-value" id="attendanceValue">0%</h3>
             </div>
           </div>
+        </div>
+
+        <!-- AÇÕES RÁPIDAS -->
+        <div class="quick-actions">
+          <button class="btn-outline" onclick="goToActivities()">
+            📘 Ver Atividades
+          </button>
+          <button class="btn-outline" onclick="goToChatbot()">
+            🤖 Entrar no Chatbot
+          </button>
         </div>
 
         <!-- LISTAGEM DE TURMAS -->
@@ -157,7 +184,6 @@
       </section>
     </main>
 
-    <!-- FOOTER -->
     <footer class="footer">
       <p>
         &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
@@ -165,9 +191,43 @@
       </p>
     </footer>
 
-    <!-- JS -->
     <script src="/common.js"></script>
     <script>
+      const API_BASE_URL =
+        window.API_BASE_URL || `${window.location.origin}/api`;
+
+      /* ==========================
+         ATIVIDADES PENDENTES DO ALUNO
+      =========================== */
+      async function loadPendingActivities() {
+        const s = getSession();
+        const el = document.getElementById("pendingActivities");
+
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/dashboard/resumo/aluno?userId=${s.user_id}&role=${s.role}`
+          );
+          const data = await res.json();
+
+          if (data.success) {
+            el.textContent = data.pendentes || 0;
+          } else {
+            el.textContent = "0";
+          }
+        } catch (err) {
+          console.error("Erro ao carregar atividades pendentes:", err);
+          el.textContent = "0";
+        }
+      }
+
+      function goToChatbot() {
+        window.location.href = "/chat.html";
+      }
+
+      function goToActivities() {
+        window.location.href = "/activities_student.html";
+      }
+
       /* ==========================
          CARREGAR TURMAS DO ALUNO
       =========================== */
@@ -212,9 +272,6 @@
         });
       }
 
-      /* ==========================
-         ENTRAR NA TURMA
-      =========================== */
       async function joinClass(event) {
         event.preventDefault();
         const input = document.getElementById("classCodeInput");
@@ -234,7 +291,10 @@
           if (data.success) {
             showToast("Você entrou na turma com sucesso!", "success");
             input.value = "";
-            setTimeout(() => loadStudentClasses(), 1000);
+            setTimeout(() => {
+              loadStudentClasses();
+              loadPendingActivities();
+            }, 1000);
           } else {
             showToast(data.message || "Código inválido.", "error");
           }
@@ -247,24 +307,23 @@
         }
       }
 
-      /* ==========================
-         ABRIR TURMA
-      =========================== */
       function openClass(id) {
         localStorage.setItem("last_turma_id", id);
         window.location.href = `/turma.html?id=${id}`;
       }
 
-      /* ==========================
-         INICIALIZAÇÃO
-      =========================== */
       document.addEventListener("DOMContentLoaded", () => {
         const s = getSession();
         if (!s.user_id || s.role !== "student") {
           window.location.href = "/";
           return;
         }
+
+        document.getElementById(
+          "welcomeNameStudent"
+        ).textContent = `Olá, ${s.name} 👋`;
         loadStudentClasses();
+        loadPendingActivities();
       });
     </script>
   </body>

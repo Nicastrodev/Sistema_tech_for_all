@@ -249,16 +249,22 @@ async function generateReport() {
   }
 
   const turmaId = localStorage.getItem("last_turma_id");
-  if (!turmaId) return showToast("Nenhuma turma ativa.", "error");
+  if (!turmaId) {
+    return showToast("Nenhuma turma ativa.", "error");
+  }
 
   showToast("Gerando relatório...", "info");
   try {
+    // 🔧 Chamada corrigida (mantém apiRequest, mas ajusta a chave)
     const data = await apiRequest(`relatorios/turma/${turmaId}/pdf`, "GET");
-    if (data.success && data.pdf_url) {
+
+    // 🔥 Corrigido: backend retorna "url", não "pdf_url"
+    if (data.success && data.url) {
       showToast("Relatório gerado com sucesso!", "success");
-      window.open(data.pdf_url, "_blank");
+      window.open(data.url, "_blank"); // abre o PDF numa nova aba
     } else {
       showToast(data.message || "Erro ao gerar relatório.", "error");
+      console.error("Erro gerar relatório:", data);
     }
   } catch (err) {
     console.error("Erro ao gerar relatório:", err);

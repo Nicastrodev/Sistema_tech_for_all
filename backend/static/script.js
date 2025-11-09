@@ -1,8 +1,8 @@
 /* ==========================
    CONFIGURAÇÃO BASE
 ========================== */
-// Reaproveita base global do common.js
-const API_BASE_URL = window.API_BASE_URL || `${window.location.origin}/api`;
+// Usa a configuração global do common.js
+const API_BASE = window.API_BASE_URL;
 
 /* ==========================
    LOGIN
@@ -21,7 +21,7 @@ async function doLogin(event) {
   btn.textContent = "Entrando...";
 
   try {
-    const res = await fetch(`${API_BASE_URL}/login`, {
+    const res = await fetch(`${API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, role }),
@@ -29,7 +29,6 @@ async function doLogin(event) {
     const data = await res.json();
 
     if (data.success) {
-      // Armazena dados da sessão
       localStorage.setItem("tf_user_id", data.user_id);
       localStorage.setItem("tf_role", data.role);
       localStorage.setItem("tf_name", data.name);
@@ -163,6 +162,48 @@ async function loadClasses() {
 }
 
 /* ==========================
+   RESUMO DO DASHBOARD PROFESSOR
+========================== */
+async function loadTeacherDashboardSummary() {
+  const s = getSession();
+  if (!s || s.role !== "teacher") return;
+
+  try {
+    const data = await apiRequest("dashboard/resumo", "GET");
+    if (data.success) {
+      const elTurmas = document.getElementById("totalTurmas");
+      const elAtividades = document.getElementById("totalAtividades");
+
+      if (elTurmas) elTurmas.textContent = data.turmas ?? 0;
+      if (elAtividades) elAtividades.textContent = data.atividades ?? 0;
+    }
+  } catch (err) {
+    console.error("Erro ao carregar resumo do dashboard:", err);
+  }
+}
+
+/* ==========================
+   RESUMO DO DASHBOARD ALUNO
+========================== */
+async function loadStudentDashboardSummary() {
+  const s = getSession();
+  if (!s || s.role !== "student") return;
+
+  try {
+    const data = await apiRequest("dashboard/resumo/aluno", "GET");
+    if (data.success) {
+      const elPendentes = document.getElementById("atividadesPendentes");
+      const elFrequencia = document.getElementById("frequenciaAluno");
+
+      if (elPendentes) elPendentes.textContent = data.pendentes ?? 0;
+      if (elFrequencia) elFrequencia.textContent = `${data.frequencia ?? 0}%`;
+    }
+  } catch (err) {
+    console.error("Erro ao carregar resumo do aluno:", err);
+  }
+}
+
+/* ==========================
    ABRIR TURMA
 ========================== */
 function openClass(turmaId) {
@@ -180,8 +221,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (path.includes("/dashboard/teacher") && s.role === "teacher") {
     loadClasses();
+    loadTeacherDashboardSummary();
   } else if (path.includes("/dashboard/student") && s.role === "student") {
     loadClasses();
+    loadStudentDashboardSummary(); // 🔥 exibe frequência e pendências
   }
 });
 
@@ -194,3 +237,5 @@ window.deleteClass = deleteClass;
 window.editClass = editClass;
 window.openClass = openClass;
 window.loadClasses = loadClasses;
+window.loadTeacherDashboardSummary = loadTeacherDashboardSummary;
+window.loadStudentDashboardSummary = loadStudentDashboardSummary;

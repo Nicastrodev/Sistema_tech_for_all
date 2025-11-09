@@ -3,8 +3,10 @@
 /* ==========================
    CONFIGURAÇÃO BASE
 ========================== */
-// 🔧 Centraliza a base da API (reutilizável em outros arquivos)
-window.API_BASE_URL = window.API_BASE_URL || `${window.location.origin}/api`;
+// 🔧 Define a base da API globalmente, apenas se ainda não existir
+if (typeof window.API_BASE_URL === "undefined") {
+  window.API_BASE_URL = `${window.location.origin}/api`;
+}
 
 /* ==========================
    SESSÃO E AUTENTICAÇÃO
@@ -18,8 +20,8 @@ function getSession() {
 }
 
 function clearSession() {
-  ["tf_user_id", "tf_role", "tf_name"].forEach(
-    localStorage.removeItem.bind(localStorage)
+  ["tf_user_id", "tf_role", "tf_name"].forEach((key) =>
+    localStorage.removeItem(key)
   );
 }
 
@@ -108,7 +110,7 @@ async function apiRequest(
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
 
-  // ✅ Evita duplicação de barras
+  // ✅ Remove / duplicadas
   const cleanPath = path.startsWith("/") ? path.slice(1) : path;
 
   try {

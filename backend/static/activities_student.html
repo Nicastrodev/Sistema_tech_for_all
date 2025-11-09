@@ -5,27 +5,304 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Minhas Atividades - Tech For All</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+
+    <style>
+      :root {
+        --bg: #f7f8fb;
+        --card: #ffffff;
+        --muted: #6b7280;
+        --text: #111827;
+        --accent: #5b6cff;
+        --success: #16a34a;
+        --danger: #ef4444;
+        --surface: #f3f4f6;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+          "Segoe UI Emoji";
+        background-color: var(--bg);
+        margin: 0;
+        color: var(--text);
+      }
+
+      header.header {
+        background: white;
+        border-bottom: 1px solid #eef0f4;
+        padding: 14px 28px;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+      .header-container {
+        max-width: 1120px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-text h1 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .brand-text p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .role-badge {
+        background: linear-gradient(180deg, #ffefcc, #fff);
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #a05200;
+      }
+
+      main {
+        max-width: 1120px;
+        margin: 28px auto;
+        padding: 0 20px 60px 20px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(14, 20, 30, 0.06);
+        padding: 28px;
+      }
+
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 18px;
+      }
+      .page-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+      .page-header p {
+        margin: 6px 0 0 0;
+        color: var(--muted);
+      }
+
+      /* Activity list (vertical cards) */
+      .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-top: 12px;
+      }
+
+      .activity-item {
+        background: linear-gradient(180deg, var(--card), #fcfdff);
+        border: 1px solid #e8edf8;
+        border-radius: 12px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .activity-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .activity-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .activity-title {
+        font-size: 1.12rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text);
+      }
+
+      .meta-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .activity-due {
+        font-size: 13px;
+        color: var(--muted);
+        background: #fff9eb;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid #fff0c7;
+        font-weight: 600;
+      }
+
+      .activity-class {
+        font-size: 13px;
+        color: #334155;
+        background: #f5f8ff;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid #e6eefc;
+      }
+
+      .activity-desc {
+        color: #374151;
+        line-height: 1.6;
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .activity-files {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+      }
+      .activity-files a {
+        text-decoration: none;
+        color: var(--accent);
+        font-weight: 600;
+        background: #f2f6ff;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e7efff;
+      }
+
+      .activity-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        justify-content: space-between;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+
+      .upload-area {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex: 1;
+      }
+      .file-input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        flex: 1;
+        min-width: 220px;
+      }
+
+      .btn {
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+      }
+      .btn-primary:hover {
+        filter: brightness(0.95);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid #e7eeff;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        padding: 8px 10px;
+        border-radius: 999px;
+      }
+      .status-pending {
+        background: var(--surface);
+        color: #555;
+      }
+      .status-done {
+        background: #ecfdf5;
+        color: var(--success);
+        border: 1px solid rgba(16, 185, 129, 0.12);
+      }
+
+      /* small helper */
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      /* responsive */
+      @media (max-width: 880px) {
+        .activity-top {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+        .activity-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .upload-area {
+          width: 100%;
+        }
+        .file-input {
+          width: 100%;
+        }
+        .btn {
+          width: 100%;
+        }
+      }
+    </style>
   </head>
+
   <body>
     <header class="header">
       <div class="header-container">
         <div class="brand">
-          <div class="logo">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <div class="logo" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
               <path
                 d="M16 2L28 9V23L16 30L4 23V9L16 2Z"
-                fill="white"
-                opacity="0.2"
+                fill="#5b6cff"
+                opacity="0.12"
               />
               <path
                 d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z"
-                fill="white"
+                fill="#5b6cff"
               />
             </svg>
           </div>
@@ -34,39 +311,43 @@
             <p>Inclusão Digital com Segurança</p>
           </div>
         </div>
+
         <div class="header-actions">
-          <div class="role-badge">Aluno</div>
-          <button class="btn-secondary" onclick="logout()">Sair</button>
+          <div class="role-badge" id="currentRole">Aluno</div>
+          <button class="btn btn-ghost" onclick="logout()">Sair</button>
         </div>
       </div>
     </header>
 
-    <main class="main-container">
-      <section class="screen">
-        <div class="form-container">
-          <div class="card">
-            <div class="card-header">
-              <h3>Minhas Atividades</h3>
-              <p>Visualize e envie suas atividades</p>
-            </div>
-
-            <div id="activityList" class="activity-list">
-              <p>Carregando atividades...</p>
-            </div>
+    <main>
+      <div class="card" role="main" aria-labelledby="pageTitle">
+        <div class="page-header">
+          <div>
+            <h3 id="pageTitle">Minhas Atividades</h3>
+            <p class="muted">Visualize, envie e acompanhe suas atividades</p>
+          </div>
+          <div class="muted" id="infoBox" aria-hidden="true">
+            <!-- espaço para info rápida -->
           </div>
         </div>
-      </section>
+
+        <div id="activityList" class="activity-list" aria-live="polite">
+          <p class="muted">Carregando atividades...</p>
+        </div>
+      </div>
     </main>
 
-    <footer class="footer">
-      <p>
+    <footer
+      class="footer"
+      style="max-width: 1120px; margin: 28px auto 60px; padding: 0 20px"
+    >
+      <p style="color: var(--muted); font-size: 13px">
         &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
         Acadêmico
       </p>
     </footer>
 
     <script src="/common.js"></script>
-    <script src="/script.js"></script>
     <script>
       const API_BASE = window.location.origin + "/api";
 
@@ -78,124 +359,191 @@
         };
       }
 
-      function notify(message, type = "info") {
-        if (typeof showToast === "function") {
-          showToast(
-            message,
-            type === "error"
-              ? "error"
-              : type === "success"
-              ? "success"
-              : "info"
-          );
-        } else {
-          alert(message);
-        }
+      function notify(msg, type = "info") {
+        if (typeof showToast === "function") showToast(msg, type);
+        else alert(msg);
       }
 
-      // 🔹 Carrega todas as atividades do aluno
+      /* Renderiza a lista de atividades em cartões verticais.
+         Mantive as chamadas e endpoints exatamente como antes. */
       async function loadActivities() {
         const list = document.getElementById("activityList");
-        const session = getSession();
+        const s = getSession();
 
-        if (!session.user_id || session.role !== "student") {
-          list.innerHTML = "<p>Erro: sessão inválida. Faça login novamente.</p>";
+        if (!s.user_id || s.role !== "student") {
+          list.innerHTML =
+            "<p class='muted'>Erro: sessão inválida. Faça login novamente.</p>";
           return;
         }
 
         try {
           const res = await fetch(
-            `${API_BASE}/tarefas?userId=${session.user_id}&role=${session.role}`,
+            `${API_BASE}/tarefas/listar?userId=${s.user_id}&role=${s.role}`,
             {
               headers: {
-                "X-User-Id": session.user_id,
-                "X-User-Role": session.role,
+                "X-User-Id": s.user_id,
+                "X-User-Role": s.role,
               },
             }
           );
-          const data = await res.json();
 
-          if (!res.ok || !data.success) {
-            throw new Error(data.message || "Falha ao carregar atividades.");
-          }
+          const data = await res.json();
+          if (!res.ok || !data.success)
+            throw new Error(data.message || "Erro ao carregar.");
 
           if (!data.tarefas || data.tarefas.length === 0) {
-            list.innerHTML = "<p>Nenhuma atividade disponível no momento.</p>";
+            list.innerHTML =
+              "<p class='muted'>Nenhuma atividade disponível.</p>";
             return;
           }
 
           list.innerHTML = "";
-          data.tarefas.forEach((tarefa) => {
-            const prazo = tarefa.prazo
-              ? new Date(tarefa.prazo).toLocaleDateString("pt-BR")
+          data.tarefas.forEach((t) => {
+            const prazo = t.prazo
+              ? new Date(t.prazo).toLocaleDateString("pt-BR")
               : "Sem prazo";
+            const entregue = !!t.entregue;
+            const dataEnvio = t.data_envio
+              ? new Date(t.data_envio).toLocaleString("pt-BR")
+              : null;
 
-            const item = document.createElement("div");
+            const item = document.createElement("article");
             item.className = "activity-item";
-            item.setAttribute("data-tarefa-id", tarefa.id);
+            item.setAttribute("data-tarefa-id", t.id);
+            item.setAttribute("aria-labelledby", `title-${t.id}`);
+
+            // anexos
+            let anexos = "";
+            if (t.arquivo) {
+              const url = `${API_BASE}/uploads/${encodeURIComponent(
+                t.arquivo
+              )}`;
+              anexos += `<a href="${url}" target="_blank" rel="noopener">📎 Arquivo</a>`;
+            }
+            if (t.link) {
+              anexos += `<a href="${t.link}" target="_blank" rel="noopener">🌐 Link</a>`;
+            }
+
+            const statusHTML = entregue
+              ? `<span class="status-pill status-done">✅ Entregue${
+                  dataEnvio ? " — " + dataEnvio : ""
+                }</span>`
+              : `<span class="status-pill status-pending">⏳ Pendente</span>`;
+
             item.innerHTML = `
-              <div class="activity-info">
-                <h4>${tarefa.titulo}</h4>
-                <p class="activity-due">Prazo: ${prazo}</p>
+              <div class="activity-top">
+                <div class="activity-info">
+                  <h4 id="title-${t.id}" class="activity-title">${escapeHtml(
+              t.titulo
+            )}</h4>
+                  <div class="meta-row">
+                    <span class="activity-due">Prazo: ${prazo}</span>
+                    <span class="activity-class">${escapeHtml(
+                      t.turma_nome || "Turma"
+                    )}</span>
+                    <span class="muted">• ${
+                      t.entregue ? "Já enviado" : "Aguardando envio"
+                    }</span>
+                  </div>
+                </div>
+                <div class="meta-row">
+                  ${statusHTML}
+                </div>
               </div>
-              <div class="activity-upload">
-                <input type="file" id="uploadFile-${tarefa.id}" class="file-input" />
-                <button class="btn-primary-small" onclick="sendActivityFromElement(this)">Enviar</button>
+
+              <p class="activity-desc">${escapeHtml(
+                t.descricao || "Sem descrição."
+              )}</p>
+
+              <div class="activity-files">${anexos}</div>
+
+              <div class="activity-actions">
+                <div class="upload-area">
+                  <input type="file" id="uploadFile-${
+                    t.id
+                  }" class="file-input" aria-label="Arquivo para ${escapeHtml(
+              t.titulo
+            )}" />
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <button class="btn btn-primary" onclick="sendActivity(${
+                    t.id
+                  })">Enviar Resposta</button>
+                </div>
               </div>
             `;
             list.appendChild(item);
           });
         } catch (err) {
           console.error(err);
-          list.innerHTML = `<p>Erro ao carregar atividades: ${err.message}</p>`;
+          list.innerHTML = `<p class="muted">Erro ao carregar atividades: ${escapeHtml(
+            err.message || String(err)
+          )}</p>`;
         }
       }
 
-      // 🔹 Envia a atividade selecionada
-      async function sendActivityFromElement(button) {
-        const item = button.closest(".activity-item");
-        const tarefaId = item.getAttribute("data-tarefa-id");
-        const fileInput = item.querySelector(".file-input");
-        const session = getSession();
+      async function sendActivity(tarefaId) {
+        const s = getSession();
+        const fileInput = document.getElementById(`uploadFile-${tarefaId}`);
 
-        if (!fileInput.files.length) {
+        if (!fileInput || !fileInput.files.length) {
           return notify("Selecione um arquivo antes de enviar.", "error");
         }
 
         const form = new FormData();
-        form.append("file", fileInput.files[0]);
-
-        button.disabled = true;
-        const originalText = button.textContent;
-        button.textContent = "Enviando...";
+        form.append("arquivo", fileInput.files[0]);
 
         try {
           const res = await fetch(`${API_BASE}/tarefas/${tarefaId}/responder`, {
             method: "POST",
             headers: {
-              "X-User-Id": session.user_id,
-              "X-User-Role": session.role,
+              "X-User-Id": s.user_id,
+              "X-User-Role": s.role,
             },
             body: form,
           });
 
           const data = await res.json();
-          if (!res.ok || !data.success) {
-            throw new Error(data.message || "Erro ao enviar atividade.");
-          }
+          if (!data.success)
+            throw new Error(data.message || "Falha ao enviar.");
 
           notify("Atividade enviada com sucesso!", "success");
-          fileInput.value = "";
+          await loadActivities();
         } catch (err) {
-          console.error("Erro no envio:", err);
-          notify("Falha ao enviar: " + err.message, "error");
-        } finally {
-          button.disabled = false;
-          button.textContent = originalText;
+          console.error(err);
+          notify("Erro ao enviar: " + (err.message || err), "error");
         }
       }
 
-      document.addEventListener("DOMContentLoaded", loadActivities);
+      function openActivity(tarefaId) {
+        // possibilidade de abrir página de detalhes no futuro
+        // por enquanto redireciona para a turma onde está a atividade (se soubermos)
+        // mantenho comportamento simples: grava last_tarefa e vai para /activities_student para futura navegação
+        localStorage.setItem("last_tarefa_id", tarefaId);
+        notify("Abrindo detalhes (em breve)", "info");
+      }
+
+      // Helpers de escape (evita XSS)
+      function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return "";
+        return String(unsafe)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // atualiza badge de papel e nome (se disponível)
+        const s = getSession();
+        if (s && s.role) {
+          const badge = document.getElementById("currentRole");
+          if (badge)
+            badge.textContent = s.role === "student" ? "Aluno" : s.role;
+        }
+        loadActivities();
+      });
     </script>
   </body>
 </html>

@@ -150,16 +150,7 @@ button {
 .btn-outline-small:hover {
   border-color: var(--primary);
   background: rgba(99, 102, 241, 0.05);
-}
-.btn-primary-small {
-  background: var(--primary);
-  color: white;
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-}
-.btn-primary-small:hover {
-  background: var(--primary-dark);
+
 } /* ==================== MAIN CONTAINER ==================== */
 .main-container {
   max-width: 1400px;

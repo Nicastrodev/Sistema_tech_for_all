@@ -5,14 +5,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atividades - Tech For All</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      .submission-count {
+        font-size: 14px;
+        color: #007bff;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+
+      .submission-item {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .submission-info h4 {
+        margin: 0;
+        color: #111827;
+      }
+
+      .submission-info p {
+        margin: 4px 0;
+        color: #374151;
+        font-size: 15px;
+      }
+
+      .submission-info small {
+        color: #6b7280;
+      }
+
+      .submission-comment {
+        background: #f3f4f6;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .submission-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .grade-input {
+        width: 80px;
+        padding: 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+      }
+
+      @media (max-width: 600px) {
+        .submission-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .grade-input,
+        .btn-primary-small {
+          width: 100%;
+        }
+      }
+    </style>
   </head>
+
   <body>
+    <!-- HEADER -->
     <header class="header">
       <div class="header-container">
         <div class="brand">
@@ -41,6 +109,7 @@
       </div>
     </header>
 
+    <!-- MAIN -->
     <main class="main-container">
       <section class="screen">
         <div class="form-container">
@@ -50,7 +119,19 @@
               <h3>Gerenciar Atividades</h3>
               <p>Crie e publique novas atividades</p>
             </div>
-            <form class="form" onsubmit="publishActivity(event)">
+
+            <form
+              class="form"
+              onsubmit="publishActivity(event)"
+              enctype="multipart/form-data"
+            >
+              <div class="form-group">
+                <label for="actClass">Turma</label>
+                <select id="actClass" required>
+                  <option value="">Carregando turmas...</option>
+                </select>
+              </div>
+
               <div class="form-group">
                 <label for="actTitle">Título da atividade</label>
                 <input
@@ -60,6 +141,7 @@
                   required
                 />
               </div>
+
               <div class="form-group">
                 <label for="actDesc">Descrição</label>
                 <textarea
@@ -68,10 +150,30 @@
                   placeholder="Descreva a atividade"
                 ></textarea>
               </div>
+
+              <div class="form-group">
+                <label for="actLink">Link de apoio (opcional)</label>
+                <input
+                  type="url"
+                  id="actLink"
+                  placeholder="https://link-material.com"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="actFile">Anexo (opcional)</label>
+                <input
+                  type="file"
+                  id="actFile"
+                  accept=".pdf,.doc,.docx,.jpg,.png,.zip"
+                />
+              </div>
+
               <div class="form-group">
                 <label for="actDue">Prazo de entrega</label>
                 <input type="date" id="actDue" required />
               </div>
+
               <div class="form-actions">
                 <button type="submit" class="btn-primary">
                   Publicar Atividade
@@ -79,7 +181,7 @@
                 <button
                   type="button"
                   class="btn-outline"
-                  onclick="window.location.href='dashboard_teacher.html'"
+                  onclick="window.location.href='/dashboard/teacher'"
                 >
                   Voltar
                 </button>
@@ -91,6 +193,9 @@
           <div class="card" style="margin-top: 24px">
             <div class="card-header">
               <h3>Entregas Recentes</h3>
+              <div id="submissionCount" class="submission-count">
+                Carregando...
+              </div>
             </div>
             <div id="submissionList" class="submission-list">
               <p>Carregando entregas...</p>
@@ -100,6 +205,7 @@
       </section>
     </main>
 
+    <!-- FOOTER -->
     <footer class="footer">
       <p>
         &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
@@ -107,181 +213,231 @@
       </p>
     </footer>
 
+    <!-- SCRIPTS -->
     <script src="/common.js"></script>
-    <script src="/script.js"></script>
     <script>
       const API_BASE = window.location.origin + "/api";
 
-      function getSession() {
-        return {
-          user_id: localStorage.getItem("tf_user_id"),
-          role: localStorage.getItem("tf_role"),
-          name: localStorage.getItem("tf_name"),
-        };
+      async function loadClasses() {
+        const s = getSession();
+        const select = document.getElementById("actClass");
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/turmas?userId=${s.user_id}&role=${s.role}`
+          );
+          const data = await res.json();
+
+          select.innerHTML = "";
+          if (!data.success || !data.turmas || data.turmas.length === 0) {
+            select.innerHTML =
+              "<option value=''>Nenhuma turma encontrada</option>";
+            return;
+          }
+
+          data.turmas.forEach((t) => {
+            const opt = document.createElement("option");
+            opt.value = t.id;
+            opt.textContent = `${t.nome} (${t.codigo_acesso}) - ${
+              t.quantidade_atividades || 0
+            } atividades`;
+            select.appendChild(opt);
+          });
+        } catch (err) {
+          console.error("Erro ao carregar turmas:", err);
+          select.innerHTML =
+            "<option value=''>Erro ao carregar turmas</option>";
+        }
       }
 
-      function notify(message, type = "info") {
-        if (typeof showToast === "function") showToast(message, type);
-        else alert(message);
-      }
-
-      // ===========================
-      // PUBLICAR NOVA ATIVIDADE
-      // ===========================
       async function publishActivity(event) {
         event.preventDefault();
+        const s = getSession();
+        if (!s || s.role !== "teacher")
+          return showToast("Acesso restrito.", "error");
 
-        const session = getSession();
-        if (!session.user_id || session.role !== "teacher") {
-          return notify("Sessão inválida. Faça login novamente.", "error");
-        }
-
-        const title = document.getElementById("actTitle").value.trim();
-        const desc = document.getElementById("actDesc").value.trim();
-        const due = document.getElementById("actDue").value;
-
-        if (!title || !due) {
-          return notify("Preencha título e prazo antes de publicar.", "error");
-        }
-
-        const body = {
-          titulo: title,
-          descricao: desc,
-          prazo: due,
-          professor_id: session.user_id,
-        };
+        const formData = new FormData();
+        formData.append(
+          "titulo",
+          document.getElementById("actTitle").value.trim()
+        );
+        formData.append(
+          "descricao",
+          document.getElementById("actDesc").value.trim()
+        );
+        formData.append("prazo", document.getElementById("actDue").value);
+        formData.append(
+          "link",
+          document.getElementById("actLink").value.trim()
+        );
+        formData.append("turma_id", document.getElementById("actClass").value);
+        const file = document.getElementById("actFile").files[0];
+        if (file) formData.append("arquivo", file);
 
         try {
           const res = await fetch(`${API_BASE}/tarefas`, {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
-              "X-User-Id": session.user_id,
-              "X-User-Role": session.role,
+              "X-User-Id": s.user_id,
+              "X-User-Role": s.role,
             },
-            body: JSON.stringify(body),
+            body: formData,
           });
 
           const data = await res.json();
-          if (!res.ok || !data.success)
-            throw new Error(data.message || "Erro ao criar atividade.");
+          if (!data.success) throw new Error(data.message);
 
-          notify(`Atividade "${title}" publicada com sucesso!`, "success");
+          showToast("Atividade publicada com sucesso!", "success");
           document.querySelector("form").reset();
           loadSubmissions();
         } catch (err) {
           console.error(err);
-          notify("Erro ao publicar: " + err.message, "error");
+          showToast("Erro ao publicar atividade: " + err.message, "error");
         }
       }
 
-      // ===========================
-      // LISTAR ENTREGAS DOS ALUNOS
-      // ===========================
       async function loadSubmissions() {
-        const session = getSession();
-        const container = document.getElementById("submissionList");
-
-        if (!session.user_id || session.role !== "teacher") {
-          container.innerHTML =
-            "<p>Erro: sessão inválida. Faça login novamente.</p>";
-          return;
-        }
+        const s = getSession();
+        const list = document.getElementById("submissionList");
+        const countLabel = document.getElementById("submissionCount");
+        list.innerHTML = "<p>Carregando entregas...</p>";
 
         try {
           const res = await fetch(
-            `${API_BASE}/tarefas/entregas?userId=${session.user_id}&role=teacher`,
-            {
-              headers: {
-                "X-User-Id": session.user_id,
-                "X-User-Role": session.role,
-              },
-            }
+            `${API_BASE}/tarefas/entregas?userId=${s.user_id}&role=${s.role}`
           );
           const data = await res.json();
 
-          if (!res.ok || !data.success) {
-            throw new Error(data.message || "Falha ao carregar entregas.");
-          }
-
-          const entregas = data.entregas;
-          if (!entregas || entregas.length === 0) {
-            container.innerHTML =
-              "<p>Nenhuma entrega de aluno foi recebida ainda.</p>";
+          if (!data.success || !data.entregas?.length) {
+            list.innerHTML = "<p>Nenhuma entrega encontrada ainda.</p>";
+            countLabel.textContent = "0 entregas";
             return;
           }
 
-          container.innerHTML = "";
-          entregas.forEach((entrega) => {
-            const date = entrega.data_envio
-              ? new Date(entrega.data_envio).toLocaleString("pt-BR")
-              : "Data não registrada";
+          const total = data.entregas.length;
+          countLabel.textContent = `📦 ${total} ${
+            total === 1 ? "entrega" : "entregas"
+          } recebidas`;
+
+          list.innerHTML = "";
+          data.entregas.forEach((ent) => {
+            const nota =
+              ent.nota !== null && ent.nota !== undefined
+                ? ent.nota.toFixed(1)
+                : "";
+            const readonly = nota ? "readonly" : "";
+            const style = nota
+              ? "background-color:#e6ffe6;border-color:#4ade80;color:#065f46;"
+              : "";
+            const msg = nota
+              ? `<span id='nota-status-${ent.id}' style='color:#16a34a;margin-left:8px;'>✅ Nota ${nota} salva</span>`
+              : "";
 
             const item = document.createElement("div");
             item.className = "submission-item";
+
             item.innerHTML = `
               <div class="submission-info">
-                <h4>${entrega.aluno_nome}</h4>
-                <p>${entrega.arquivo_nome} • Enviado em ${date}</p>
+                <h4>${ent.aluno_nome}</h4>
+                <p><strong>${ent.tarefa_titulo}</strong></p>
+                <small>Enviado em ${new Date(ent.data_envio).toLocaleString(
+                  "pt-BR"
+                )}</small>
               </div>
+              ${
+                ent.comentario
+                  ? `<div class="submission-comment">💬 <strong>Comentário do aluno:</strong> ${ent.comentario}</div>`
+                  : ""
+              }
               <div class="submission-actions">
-                <button class="btn-outline-small"
-                  onclick="downloadFile('${entrega.arquivo_url}')">
-                  Baixar
+                ${
+                  ent.arquivo_url
+                    ? `<button class="btn-outline-small" onclick="window.open('${ent.arquivo_url}', '_blank')">Baixar</button>`
+                    : ""
+                }
+                <input type="number" id="nota-${
+                  ent.id
+                }" class="grade-input" min="0" max="10" step="0.1" placeholder="Nota" value="${nota}" ${readonly} style="${style}">
+                <button class="btn-primary-small" onclick="sendGrade(${
+                  ent.id
+                })" ${
+              nota ? 'style="background:#16a34a;color:white;" disabled' : ""
+            }>
+                  ${nota ? "✔️ Salva" : "Salvar Nota"}
                 </button>
-                <input type="number" id="nota-${entrega.id}" class="grade-input" min="0" max="10" step="0.1" placeholder="Nota" />
-                <button class="btn-primary-small" onclick="sendGrade(${entrega.id})">Salvar Nota</button>
+                ${msg}
               </div>
             `;
-            container.appendChild(item);
+            list.appendChild(item);
           });
         } catch (err) {
           console.error(err);
-          container.innerHTML = `<p>Erro ao carregar entregas: ${err.message}</p>`;
+          list.innerHTML = "<p>Erro ao carregar entregas.</p>";
         }
       }
 
-      function downloadFile(url) {
-        if (!url) return notify("Arquivo não disponível.", "error");
-        window.open(url, "_blank");
-      }
-
-      // ===========================
-      // ENVIAR NOTA PARA O BACKEND
-      // ===========================
-      async function sendGrade(respostaId) {
-        const input = document.getElementById(`nota-${respostaId}`);
-        const nota = parseFloat(input.value);
-        const session = getSession();
+      async function sendGrade(id) {
+        const s = getSession();
+        const notaInput = document.getElementById(`nota-${id}`);
+        const nota = parseFloat(notaInput.value);
+        const btn = notaInput.nextElementSibling;
 
         if (isNaN(nota) || nota < 0 || nota > 10) {
-          return notify("Digite uma nota válida entre 0 e 10.", "error");
+          showToast("Nota inválida. Digite um valor de 0 a 10.", "error");
+          return;
         }
 
+        btn.disabled = true;
+        btn.textContent = "Salvando...";
+
         try {
-          const res = await fetch(`${API_BASE}/tarefas/${respostaId}/avaliar`, {
+          const res = await fetch(`${API_BASE}/tarefas/${id}/avaliar`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-User-Id": session.user_id,
-              "X-User-Role": session.role,
+              "X-User-Id": s.user_id,
+              "X-User-Role": s.role,
             },
             body: JSON.stringify({ nota }),
           });
 
           const data = await res.json();
-          if (!res.ok || !data.success)
-            throw new Error(data.message || "Erro ao salvar nota.");
+          if (!data.success) throw new Error(data.message);
 
-          notify("Nota registrada com sucesso!", "success");
-          input.value = "";
+          showToast("Nota registrada com sucesso!", "success");
+
+          notaInput.readOnly = true;
+          notaInput.style.backgroundColor = "#e6ffe6";
+          notaInput.style.borderColor = "#4ade80";
+          notaInput.style.color = "#065f46";
+
+          let statusEl = document.getElementById(`nota-status-${id}`);
+          if (!statusEl) {
+            statusEl = document.createElement("span");
+            statusEl.id = `nota-status-${id}`;
+            statusEl.style.marginLeft = "8px";
+            statusEl.style.fontSize = "14px";
+            statusEl.style.color = "#16a34a";
+            notaInput.parentNode.appendChild(statusEl);
+          }
+          statusEl.textContent = `✅ Nota ${nota.toFixed(1)} salva`;
+
+          btn.textContent = "✔️ Salva";
+          btn.style.background = "#16a34a";
+          btn.style.color = "white";
         } catch (err) {
           console.error(err);
-          notify("Erro ao registrar nota: " + err.message, "error");
+          showToast("Erro ao salvar nota.", "error");
+          btn.textContent = "Salvar Nota";
+        } finally {
+          btn.disabled = false;
         }
       }
 
-      document.addEventListener("DOMContentLoaded", loadSubmissions);
+      document.addEventListener("DOMContentLoaded", () => {
+        loadClasses();
+        loadSubmissions();
+      });
     </script>
   </body>
 </html>

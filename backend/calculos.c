@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct {
     float atividades[10];
     int total_atividades;
     float exame_final;
+    int total_tarefas;
+    int entregues;
 } Aluno;
 
 float calcular_media(Aluno a) {
@@ -20,6 +23,11 @@ float calcular_media(Aluno a) {
     return media_atividades;
 }
 
+float calcular_frequencia(Aluno a) {
+    if (a.total_tarefas <= 0) return 0.0;
+    return ((float)a.entregues / a.total_tarefas) * 100.0;
+}
+
 const char* situacao(float media) {
     if (media >= 7.0)
         return "Aprovado";
@@ -30,14 +38,16 @@ const char* situacao(float media) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        fprintf(stderr, "Uso: %s <notas_separadas_por_virgula> <exame_final>\n", argv[0]);
+    if (argc < 5) {
+        fprintf(stderr, "Uso: %s <notas_separadas_por_virgula> <exame_final> <total_tarefas> <entregues>\n", argv[0]);
         return 1;
     }
 
     Aluno a;
     a.total_atividades = 0;
     a.exame_final = atof(argv[2]);
+    a.total_tarefas = atoi(argv[3]);
+    a.entregues = atoi(argv[4]);
 
     char *token = strtok(argv[1], ",");
     while (token && a.total_atividades < 10) {
@@ -46,8 +56,10 @@ int main(int argc, char *argv[]) {
     }
 
     float media_final = calcular_media(a);
+    float freq = calcular_frequencia(a);
     const char *status = situacao(media_final);
 
-    printf("{\"media\": %.2f, \"situacao\": \"%s\"}\n", media_final, status);
+    printf("{\"media\": %.2f, \"situacao\": \"%s\", \"frequencia\": %.1f}\n",
+           media_final, status, freq);
     return 0;
 }

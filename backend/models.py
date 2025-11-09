@@ -38,7 +38,6 @@ class User(db.Model):
         cascade="all, delete-orphan"
     )
 
-    # Métodos auxiliares
     def set_password(self, password):
         self.password_hash = generate_password_hash(
             password, method="pbkdf2:sha256")
@@ -73,7 +72,7 @@ class Material(db.Model):
             "descricao": self.descricao,
             "arquivo": self.arquivo,
             "url": f"{host_url}api/uploads/{self.arquivo}" if self.arquivo else None,
-            "data_publicacao": self.data_publicacao.isoformat()
+            "data_publicacao": self.data_publicacao.isoformat(),
         }
 
     def __repr__(self):
@@ -150,6 +149,11 @@ class Tarefa(db.Model):
         db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # 🔹 Novos campos — permitem anexos e links do professor
+    arquivo = db.Column(db.String(255))  # nome do arquivo salvo
+    # link opcional (Google Docs, vídeo etc.)
+    link = db.Column(db.String(500))
+
     turma = db.relationship("Turma", back_populates="tarefas")
     respostas = db.relationship(
         "Resposta",
@@ -163,7 +167,7 @@ class Tarefa(db.Model):
 
 
 # =====================================================
-# RESPOSTA (entrega de aluno)
+# RESPOSTA (entrega do aluno)
 # =====================================================
 class Resposta(db.Model):
     __tablename__ = "respostas"
@@ -172,7 +176,31 @@ class Resposta(db.Model):
     tarefa_id = db.Column(db.Integer, db.ForeignKey(
         "tarefas.id"), nullable=False)
     aluno_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    conteudo = db.Column(db.String(255))  # nome do arquivo enviado
+    enviado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    nota = db.Column(db.Float)
+
+    tarefa = db.relationship("Tarefa", back_populates="respostas")
+    aluno = db.relationship("User", lazy="joined")
+
+    def __repr__(self):
+        return f"<Resposta {self.id} - tarefa={self.tarefa_id} aluno={self.aluno_id}>"
+
+# =====================================================
+# RESPOSTA (entrega de aluno)
+# =====================================================
+
+
+class Resposta(db.Model):
+    __tablename__ = "respostas"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    tarefa_id = db.Column(db.Integer, db.ForeignKey(
+        "tarefas.id"), nullable=False)
+    aluno_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     conteudo = db.Column(db.Text)
+    comentario = db.Column(db.Text)  # 🆕 Comentário do aluno
     enviado_em = db.Column(db.DateTime, default=datetime.utcnow)
     nota = db.Column(db.Float)
 

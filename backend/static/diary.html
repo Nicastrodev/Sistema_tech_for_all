@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Diário de Aula - Tech For All</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
+    <!-- HEADER -->
     <header class="header">
       <div class="header-container">
         <div class="brand">
@@ -35,12 +34,13 @@
           </div>
         </div>
         <div class="header-actions">
-          <div class="role-badge">Professor</div>
+          <div class="role-badge" id="roleBadge">Professor</div>
           <button class="btn-secondary" onclick="logout()">Sair</button>
         </div>
       </div>
     </header>
 
+    <!-- MAIN -->
     <main class="main-container">
       <section class="screen">
         <div class="form-container">
@@ -52,10 +52,8 @@
             <form class="form" onsubmit="saveDiary(event)">
               <div class="form-group">
                 <label for="diaryClass">Turma</label>
-                <select id="diaryClass">
-                  <option>7º A</option>
-                  <option>8º B</option>
-                  <option>9º C</option>
+                <select id="diaryClass" required>
+                  <option value="">Carregando turmas...</option>
                 </select>
               </div>
               <div class="form-group">
@@ -72,14 +70,7 @@
                 ></textarea>
               </div>
               <div class="form-actions">
-                <button type="submit" class="btn-primary">Salvar Aula</button>
-                <button
-                  type="button"
-                  class="btn-outline"
-                  onclick="suggestWithAI()"
-                >
-                  Sugestão com IA
-                </button>
+                <button type="submit" class="btn-primary">Gerar PDF</button>
               </div>
               <div id="diaryMsg" class="success-message"></div>
             </form>
@@ -88,6 +79,7 @@
       </section>
     </main>
 
+    <!-- FOOTER -->
     <footer class="footer">
       <p>
         &copy; 2025 Tech For All - Inclusão Digital com Segurança | Protótipo
@@ -96,65 +88,110 @@
     </footer>
 
     <script src="/common.js"></script>
-    <script src="/script.js"></script>
     <script>
-      // Define data atual
-      document.addEventListener("DOMContentLoaded", function () {
+      const API_BASE_URL =
+        window.API_BASE_URL || `${window.location.origin}/api`;
+
+      // ===============================
+      // CARREGAR TURMAS REAIS
+      // ===============================
+      async function loadTeacherClasses() {
+        const s = getSession();
+        const select = document.getElementById("diaryClass");
+        if (!s || s.role !== "teacher") {
+          showToast("Acesso restrito a professores.", "error");
+          window.location.href = "/";
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/turmas?userId=${s.user_id}&role=${s.role}`
+          );
+          const data = await res.json();
+
+          select.innerHTML = "";
+          if (!data.success || !data.turmas || data.turmas.length === 0) {
+            select.innerHTML =
+              "<option value=''>Nenhuma turma encontrada</option>";
+            return;
+          }
+
+          data.turmas.forEach((t) => {
+            const option = document.createElement("option");
+            option.value = t.nome;
+            option.textContent = `${t.nome} (${t.codigo_acesso})`;
+            select.appendChild(option);
+          });
+        } catch (err) {
+          console.error("Erro ao carregar turmas:", err);
+          select.innerHTML =
+            "<option value=''>Erro ao carregar turmas</option>";
+        }
+      }
+
+      // ===============================
+      // SALVAR E GERAR PDF
+      // ===============================
+      function saveDiary(event) {
+        event.preventDefault();
+        const turma = document.getElementById("diaryClass").value;
+        const data = document.getElementById("diaryDate").value;
+        const conteudo = document.getElementById("diaryContent").value;
+        const s = getSession();
+
+        if (!turma || !data || !conteudo) {
+          showToast("Preencha todos os campos.", "error");
+          return;
+        }
+
+        generateDiaryPDF(s.name, turma, data, conteudo);
+        showToast("PDF gerado e baixado automaticamente!", "success");
+
+        document.getElementById("diaryContent").value = "";
+      }
+
+      // ===============================
+      // GERAR E BAIXAR PDF AUTOMATICAMENTE
+      // ===============================
+      function generateDiaryPDF(professor, turma, data, conteudo) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("Diário de Aula - Tech For All", 105, 20, { align: "center" });
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Professor: ${professor}`, 20, 40);
+        doc.text(`Turma: ${turma}`, 20, 50);
+        doc.text(`Data: ${new Date(data).toLocaleDateString("pt-BR")}`, 20, 60);
+
+        doc.setFont("helvetica", "bold");
+        doc.text("Conteúdo da Aula:", 20, 80);
+        doc.setFont("helvetica", "normal");
+        const textLines = doc.splitTextToSize(conteudo, 170);
+        doc.text(textLines, 20, 90);
+
+        doc.save(`diario_${turma}_${data}.pdf`);
+      }
+
+      // ===============================
+      // INICIALIZAÇÃO
+      // ===============================
+      document.addEventListener("DOMContentLoaded", () => {
+        loadTeacherClasses();
+
         const diaryDateInput = document.getElementById("diaryDate");
         if (diaryDateInput) {
           const today = new Date().toISOString().split("T")[0];
           diaryDateInput.value = today;
         }
       });
-
-      function saveDiary(event) {
-        event.preventDefault();
-
-        const diaryClass = document.getElementById("diaryClass").value;
-        const diaryDate = document.getElementById("diaryDate").value;
-        const diaryContent = document.getElementById("diaryContent").value;
-
-        if (!diaryDate || !diaryContent) {
-          alert("Por favor, preencha todos os campos obrigatórios.");
-          return;
-        }
-
-        const diaryMsg = document.getElementById("diaryMsg");
-        diaryMsg.textContent = `✓ Aula registrada com sucesso para a turma ${diaryClass} em ${formatDate(
-          diaryDate
-        )}`;
-        diaryMsg.classList.add("show");
-
-        setTimeout(() => {
-          diaryMsg.classList.remove("show");
-        }, 5000);
-
-        document.getElementById("diaryContent").value = "";
-      }
-
-      function suggestWithAI() {
-        const diaryContent = document.getElementById("diaryContent");
-        const suggestions = [
-          "Sugestão IA: Revisar os conceitos principais da aula anterior, propor exercícios práticos em grupo e finalizar com um resumo colaborativo.",
-          "Sugestão IA: Introduzir o tema com exemplos do cotidiano, desenvolver atividade hands-on e avaliar com quiz interativo.",
-          "Sugestão IA: Discussão em grupo sobre o tema, apresentação de casos práticos, exercícios individuais e feedback coletivo.",
-          "Sugestão IA: Aula expositiva dialogada, resolução de problemas em duplas, correção colaborativa e sistematização do conteúdo.",
-        ];
-
-        const randomSuggestion =
-          suggestions[Math.floor(Math.random() * suggestions.length)];
-
-        diaryContent.value = "";
-        let i = 0;
-        const typingEffect = setInterval(() => {
-          if (i < randomSuggestion.length) {
-            diaryContent.value += randomSuggestion.charAt(i);
-            i++;
-          } else {
-            clearInterval(typingEffect);
-          }
-        }, 20);
-      }
     </script>
+
+    <!-- Biblioteca PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </body>
 </html>
