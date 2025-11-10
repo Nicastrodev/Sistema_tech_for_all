@@ -1,9 +1,10 @@
 Flask==3.0.3
 Flask-Cors==4.0.0
 Flask-SQLAlchemy==3.1.1
+gunicorn==23.0.0
 PyMySQL==1.1.0
 python-dotenv==1.0.1
-Werkzeug==3.0.3
-gunicorn
-requests
-openai
+requests==2.32.3
+openai==2.7.1
+SQLAlchemy==2.0.44
+reportlab==3.6.13 
