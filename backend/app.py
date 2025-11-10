@@ -170,8 +170,17 @@ def create_app():
 # =====================================================
 # EXECUÇÃO DIRETA
 # =====================================================
+
 if __name__ == "__main__":
     app = create_app()
+
+    # Cria as tabelas se ainda não existirem
     with app.app_context():
         db.create_all()
-    app.run(host="0.0.0.0", port=5050, debug=True)
+
+    # Render define automaticamente a variável PORT (ex: 10000)
+    # usa 5050 localmente, variável no Render
+    port = int(os.environ.get("PORT", 5050))
+    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
+
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
