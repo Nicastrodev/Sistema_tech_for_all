@@ -10,20 +10,31 @@
       rel="stylesheet"
     />
     <style>
-      .join-class-section {
-        display: flex;
-        justify-content: center;
-        margin: 24px 0;
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
       }
 
-      .join-card {
-        max-width: 520px;
-        width: 100%;
-        text-align: center;
-        padding: 24px;
+      .dashboard-layout {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 24px;
+      }
+
+      @media (max-width: 900px) {
+        .dashboard-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .join-card,
+      .card,
+      .chat-section {
         background: var(--card-bg, #fff);
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-radius: 14px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        padding: 24px;
       }
 
       .join-card h3 {
@@ -54,39 +65,53 @@
         padding: 10px 20px;
       }
 
-      .quick-actions {
+      .stats-grid {
         display: flex;
+        gap: 20px;
+        margin-top: 24px;
         flex-wrap: wrap;
-        gap: 16px;
-        justify-content: center;
-        margin: 32px 0;
       }
 
-      .quick-actions button {
-        min-width: 200px;
+      .stat-card {
+        flex: 1;
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s;
       }
 
-      /* Chat com IA destacado */
+      .stat-card:hover {
+        transform: scale(1.03);
+      }
+
+      .stat-icon {
+        font-size: 28px;
+      }
+
       .chat-section {
-        margin: 40px auto;
-        max-width: 800px;
-        text-align: center;
         background: linear-gradient(135deg, #4f46e5, #6d28d9);
-        border-radius: 16px;
-        padding: 40px 30px;
         color: white;
-        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+        text-align: left;
+        padding: 32px 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 300px;
       }
 
       .chat-section h3 {
-        font-size: 1.6rem;
+        font-size: 1.4rem;
         margin-bottom: 10px;
       }
 
       .chat-section p {
-        font-size: 1rem;
+        font-size: 0.95rem;
         opacity: 0.9;
-        margin-bottom: 24px;
+        line-height: 1.5;
       }
 
       .chat-section button {
@@ -94,18 +119,20 @@
         color: #4f46e5;
         font-weight: 600;
         border-radius: 10px;
-        padding: 12px 28px;
-        font-size: 1rem;
+        padding: 10px 22px;
+        font-size: 0.95rem;
         transition: 0.2s;
+        align-self: flex-start;
       }
 
       .chat-section button:hover {
-        background: #f9fafb;
+        background: #f3f4f6;
         transform: scale(1.03);
       }
 
       .chat-icon {
-        font-size: 48px;
+        font-size: 40px;
+        margin-bottom: 8px;
         animation: pulse 2s infinite;
       }
 
@@ -122,6 +149,10 @@
           opacity: 0.7;
           transform: scale(1);
         }
+      }
+
+      .class-list {
+        margin-top: 12px;
       }
     </style>
   </head>
@@ -155,77 +186,82 @@
       </div>
     </header>
 
-    <main class="main-container">
+    <main>
       <section class="screen" id="dashboard-student">
         <div class="dashboard-header">
+          <h2 id="welcomeNameStudent">Olá, Aluno 👋</h2>
+          <p class="subtitle">Bem-vindo(a) ao seu painel de estudos</p>
+        </div>
+
+        <div class="dashboard-layout">
+          <!-- LADO ESQUERDO -->
           <div>
-            <h2 id="welcomeNameStudent">Olá, Aluno 👋</h2>
-            <p class="subtitle">Bem-vindo(a) ao seu painel de estudos</p>
-          </div>
-        </div>
+            <!-- ENTRAR EM TURMA -->
+            <div class="join-card">
+              <h3>Entrar em uma Turma</h3>
+              <p>
+                Insira o código fornecido pelo seu professor para participar.
+              </p>
+              <form onsubmit="joinClass(event)" class="join-class-form">
+                <input
+                  type="text"
+                  id="classCodeInput"
+                  placeholder="Ex: ABC123"
+                  maxlength="10"
+                  required
+                />
+                <button type="submit" class="btn-primary">Entrar</button>
+              </form>
+            </div>
 
-        <!-- ENTRAR EM TURMA -->
-        <div class="join-class-section">
-          <div class="join-card">
-            <h3>Entrar em uma Turma</h3>
-            <p>Insira o código fornecido pelo seu professor para participar.</p>
-            <form onsubmit="joinClass(event)" class="join-class-form">
-              <input
-                type="text"
-                id="classCodeInput"
-                placeholder="Ex: ABC123"
-                maxlength="10"
-                required
-              />
-              <button type="submit" class="btn-primary">Entrar</button>
-            </form>
-          </div>
-        </div>
+            <!-- ESTATÍSTICAS -->
+            <div class="stats-grid">
+              <div
+                class="stat-card"
+                style="cursor: pointer"
+                onclick="goToActivities()"
+              >
+                <div class="stat-icon orange">📚</div>
+                <div class="stat-content">
+                  <p class="stat-label">Atividades Pendentes</p>
+                  <h3 class="stat-value" id="atividadesPendentes">0</h3>
+                </div>
+              </div>
 
-        <!-- ESTATÍSTICAS -->
-        <div class="stats-grid">
-          <div
-            class="stat-card"
-            style="cursor: pointer"
-            onclick="goToActivities()"
-          >
-            <div class="stat-icon orange">📚</div>
-            <div class="stat-content">
-              <p class="stat-label">Atividades Pendentes</p>
-              <h3 class="stat-value" id="atividadesPendentes">0</h3>
+              <div class="stat-card">
+                <div class="stat-icon green">📈</div>
+                <div class="stat-content">
+                  <p class="stat-label">Frequência</p>
+                  <h3 class="stat-value" id="frequenciaAluno">0%</h3>
+                </div>
+              </div>
+            </div>
+
+            <!-- LISTAGEM DE TURMAS -->
+            <div class="card" style="margin-top: 24px">
+              <div class="card-header">
+                <h3>Minhas Turmas</h3>
+                <p class="subtitle">Visualize as turmas que você participa</p>
+              </div>
+              <div class="class-list" id="classList">
+                <p style="color: var(--text-secondary); padding: 20px">
+                  Carregando turmas...
+                </p>
+              </div>
             </div>
           </div>
 
-          <div class="stat-card">
-            <div class="stat-icon green">📈</div>
-            <div class="stat-content">
-              <p class="stat-label">Frequência</p>
-              <h3 class="stat-value" id="frequenciaAluno">0%</h3>
+          <!-- LADO DIREITO - CHAT -->
+          <div class="chat-section">
+            <div>
+              <div class="chat-icon">💬</div>
+              <h3>Chat com IA</h3>
+              <p>
+                Tire dúvidas sobre qualquer tema das suas aulas ou atividades.
+                Nossa IA está aqui para te ajudar a estudar melhor!
+              </p>
             </div>
-          </div>
-        </div>
-
-        <!-- CHAT COM IA -->
-        <div class="chat-section">
-          <div class="chat-icon">💬</div>
-          <h3>Chat com IA</h3>
-          <p>
-            Tire dúvidas sobre qualquer tema das suas aulas ou atividades. Nossa
-            IA está aqui para te ajudar a estudar melhor!
-          </p>
-          <button onclick="goToChatbot()">Abrir Chat Inteligente</button>
-        </div>
-
-        <!-- LISTAGEM DE TURMAS -->
-        <div class="card" style="margin-top: 32px">
-          <div class="card-header">
-            <h3>Minhas Turmas</h3>
-            <p class="subtitle">Visualize as turmas que você participa</p>
-          </div>
-          <div class="class-list" id="classList">
-            <p style="color: var(--text-secondary); padding: 20px">
-              Carregando turmas...
-            </p>
+            <button onclick="goToChatbot()">Abrir Chat Inteligente</button>
           </div>
         </div>
       </section>

@@ -437,6 +437,59 @@ def adicionar_aluno_turma(turma_id):
         traceback.print_exc()
         return _json_error("Erro ao adicionar aluno.")
 
+# =====================================================
+# ENTRAR EM TURMA (ALUNO)
+# =====================================================
+
+
+@bp.route("/turmas/entrar", methods=["POST"])
+def entrar_turma():
+    try:
+        user_id, role = _extract_userid_and_role_from_request()
+        user = _get_user_by_id(user_id)
+
+        if not user or role != "student":
+            return _json_error("Apenas alunos podem entrar em turmas.", 403)
+
+        data = request.get_json() or {}
+        codigo = (data.get("codigo") or data.get(
+            "codigo_acesso") or "").strip().upper()
+
+        if not codigo:
+            return _json_error("Código da turma é obrigatório.", 400)
+
+        turma = Turma.query.filter_by(codigo_acesso=codigo).first()
+        if not turma:
+            return _json_error("Código de turma inválido.", 404)
+
+        # verificar se aluno já está na turma
+        relacao_existente = AlunoTurma.query.filter_by(
+            aluno_id=user.id, turma_id=turma.id).first()
+        if relacao_existente:
+            return jsonify({
+                "success": False,
+                "message": "Você já está matriculado nesta turma."
+            }), 400
+
+        nova_relacao = AlunoTurma(aluno_id=user.id, turma_id=turma.id)
+        db.session.add(nova_relacao)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Você entrou na turma '{turma.nome}' com sucesso!",
+            "turma": {
+                "id": turma.id,
+                "nome": turma.nome,
+                "descricao": turma.descricao,
+                "professor_nome": getattr(turma.professor, "name", None)
+            }
+        }), 200
+
+    except Exception as e:
+        traceback.print_exc()
+        return _json_error(f"Erro ao entrar na turma: {str(e)}")
+
 
 @bp.route("/turmas/<int:turma_id>/aluno/<int:aluno_id>", methods=["DELETE"])
 def remover_aluno_turma(turma_id, aluno_id):
@@ -937,6 +990,9 @@ chat_memory = {}  # memória leve por sessão (em RAM)
 
 @bp.route("/ia/chat", methods=["POST"])
 def ia_chat():
+    import google.generativeai as genai
+    import os
+
     try:
         data = request.get_json()
         question = data.get("question", "").strip()
@@ -947,100 +1003,62 @@ def ia_chat():
         if not question:
             return jsonify({"success": False, "message": "Mensagem vazia."}), 400
 
-        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        if not OPENAI_API_KEY:
-            return jsonify({"success": False, "message": "Chave da OpenAI não configurada."}), 500
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        if not GEMINI_API_KEY:
+            print("❌ ERRO: GEMINI_API_KEY não configurada.")
+            return jsonify({"success": False, "message": "Chave da Gemini não configurada."}), 500
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-        }
+        genai.configure(api_key=GEMINI_API_KEY)
 
-        # 🧠 Recupera histórico da conversa (máx. 5 mensagens)
+        # Memória por aluno (últimas 5 mensagens)
+        global chat_memory
         history = chat_memory.get(student_id, [])
         history.append({"role": "user", "content": question})
         history = history[-5:]
 
-        # ===============================
-        # 🎓 Comportamento do Assistente
-        # ===============================
+        # Instrução principal
         system_prompt = f"""
-        Você é o **Assistente Tech For All**, o mentor digital oficial da plataforma Tech For All.
+Você é o **Assistente Tech For All**, mentor digital dos alunos da plataforma Tech For All.
 
-        🧭 Sua missão:
-        Ajudar alunos como {student_name} a aprender e usar o sistema com autonomia e confiança.
+🎯 Sua missão:
+Ajudar o aluno {student_name} a aprender com autonomia — nunca entregue respostas diretas logo de início.
+Explique passo a passo, incentive o raciocínio e aja como um tutor paciente e didático.
 
-        🎯 Funções principais:
-        1️⃣ **Mentor educacional:**  
-           - Ajude o aluno a pensar por conta própria.  
-           - Faça perguntas reflexivas (“O que você acha que aconteceria se...?”).  
-           - Dê dicas graduais e use exemplos simples.  
-           - Corrija erros com gentileza e incentivo.  
-           - Só dê respostas completas se o aluno pedir claramente.
+📘 Quando o aluno perguntar sobre o sistema:
+- "Como entrar em uma turma" → Explique que ele deve pedir o código ao professor e inserir no painel.
+- "Como ver atividades" → Indique o menu “Atividades”.
+- "Como ver notas ou frequência" → Informe que estão dentro da turma.
+- "O que é a Tech For All" → Diga que é uma plataforma de inclusão digital com IA educativa.
 
-        2️⃣ **Guia da plataforma Tech For All:**  
-           Quando o aluno perguntar sobre o sistema, responda com instruções claras:
-           - “Como entrar em uma turma” → Diga: "Peça o código ao professor e insira-o na seção 'Entrar em uma turma' do seu painel."
-           - “Como ver atividades” → Explique que há uma aba 'Atividades' no painel com todas as tarefas e prazos.
-           - “Como ver notas ou frequência” → Diga que estão disponíveis dentro da turma correspondente.
-           - “Como sair do sistema” → Informe que há um botão “Sair” no canto superior direito.
-           - “O que é a Tech For All” → Responda que é uma plataforma de inclusão digital com foco em aprendizado assistido por IA.
+💬 Estilo:
+- Sempre responda em português.
+- Seja gentil e claro.
+- Nunca repita mensagens genéricas.
+- Termine respostas com algo motivador, como “Quer tentar comigo?” ou “Quer que eu te guie passo a passo?”.
+"""
 
-        💬 Estilo de comunicação:
-        - Nunca repita mensagens genéricas de saudação.  
-        - Mantenha o contexto da conversa e continue naturalmente.  
-        - Responda como se fosse uma troca contínua.  
-        - Use um tom amigável, acolhedor e didático.  
-        - Termine respostas longas com um convite à reflexão (“Quer tentar resolver comigo?” ou “Quer que eu te guie passo a passo?”).  
+        # Modelo Gemini atualizado
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
-        ⚙️ Observações:
-        - Se já estiver conversando, **não repita frases como “Posso te ajudar com isso?”** — continue o diálogo de forma fluida.
-        - Evite respostas idênticas em sequência.  
-        - Se o aluno mudar de assunto, adapte o tom e continue de forma natural.
-        """
+        # Construção da conversa no formato correto
+        messages = [
+            {"role": "user", "parts": [system_prompt]},
+            *[{"role": "user", "parts": [m["content"]]} for m in history],
+        ]
 
-        messages = [{"role": "system", "content": system_prompt}] + history
+        response = model.generate_content(messages)
+        answer = (
+            response.text.strip()
+            if hasattr(response, "text") and response.text
+            else "Desculpe, não consegui entender. Pode tentar reformular?"
+        )
 
-        payload = {
-            "model": "gpt-4o-mini",
-            "messages": messages,
-            "temperature": 0.8,
-        }
-
-        # ===============================
-        # 🚀 Chamada à API OpenAI
-        # ===============================
-        r = requests.post(
-            "https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-        if r.status_code != 200:
-            print("❌ Erro na OpenAI:", r.text)
-            return jsonify({"success": False, "message": "Erro ao se comunicar com a IA."}), 500
-
-        resp_json = r.json()
-        answer = resp_json["choices"][0]["message"]["content"]
-
-        # 🔄 Evita repetição de mensagens genéricas
-        if "Posso te ajudar" in answer and len(history) > 2:
-            print(
-                "⚠️ Resposta repetitiva detectada — resetando contexto para o aluno", student_name)
-            history = []  # limpa memória para essa sessão
-
-            # tenta novamente com o mesmo prompt
-            payload["messages"] = [{"role": "system", "content": system_prompt}, {
-                "role": "user", "content": question}]
-            r2 = requests.post(
-                "https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-            if r2.status_code == 200:
-                resp_json = r2.json()
-                answer = resp_json["choices"][0]["message"]["content"]
-
-        # 🧩 Atualiza memória
-        history.append({"role": "assistant", "content": answer})
+        # Atualiza histórico
+        history.append({"role": "model", "content": answer})
         chat_memory[student_id] = history[-5:]
 
-        # ✅ Retorna resposta
         return jsonify({"success": True, "answer": answer})
 
     except Exception as e:
-        print("❌ Erro no chat IA:", e)
+        print("❌ Erro no chat Gemini:", str(e))
         return jsonify({"success": False, "message": str(e)}), 500

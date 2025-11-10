@@ -60,12 +60,15 @@ function checkAuth() {
 }
 
 /* ==========================
-   LOGOUT GLOBAL
+   LOGOUT GLOBAL (MODAL BONITO)
 ========================== */
 function logout() {
-  if (!confirm("Deseja realmente sair da sua conta?")) return;
-  clearSession();
-  window.location.href = "/";
+  showConfirm("Deseja realmente sair da sua conta?", (confirmed) => {
+    if (!confirmed) return;
+    clearSession();
+    showToast("Você saiu da sua conta.", "success");
+    setTimeout(() => (window.location.href = "/"), 800);
+  });
 }
 
 /* ==========================
@@ -184,6 +187,111 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ==========================
+   CONFIRM CUSTOMIZADO BONITO
+========================== */
+function showConfirm(message, onConfirm) {
+  // Evita duplicar
+  if (document.querySelector(".confirm-overlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.innerHTML = `
+    <div class="confirm-box">
+      <h3 class="confirm-title">Confirmação</h3>
+      <p>${escapeHtml(message)}</p>
+      <div class="confirm-actions">
+        <button id="confirmYes" class="btn-primary">Sim</button>
+        <button id="confirmNo" class="btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("confirmYes").onclick = () => {
+    overlay.remove();
+    if (onConfirm) onConfirm(true);
+  };
+  document.getElementById("confirmNo").onclick = () => {
+    overlay.remove();
+    if (onConfirm) onConfirm(false);
+  };
+}
+
+/* ==========================
+   ESTILOS DO CONFIRM
+========================== */
+const confirmStyles = document.createElement("style");
+confirmStyles.textContent = `
+  .confirm-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+  .confirm-box {
+    background: white;
+    padding: 28px 24px;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 360px;
+    text-align: center;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.15);
+    animation: scaleIn 0.25s ease;
+  }
+  .confirm-title {
+    font-weight: 600;
+    color: #4f46e5;
+    margin-bottom: 10px;
+    font-size: 18px;
+  }
+  .confirm-box p {
+    margin-bottom: 22px;
+    color: #333;
+    font-size: 15px;
+  }
+  .confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+  }
+  .btn-primary {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-primary:hover {
+    background: #4338ca;
+    transform: scale(1.05);
+  }
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #333;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-secondary:hover {
+    background: #e5e7eb;
+    transform: scale(1.05);
+  }
+  @keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+`;
+document.head.appendChild(confirmStyles);
+
+/* ==========================
    EXPORTAÇÃO GLOBAL
 ========================== */
 window.getSession = getSession;
@@ -194,3 +302,4 @@ window.showToast = showToast;
 window.apiRequest = apiRequest;
 window.escapeHtml = escapeHtml;
 window.formatDate = formatDate;
+window.showConfirm = showConfirm;
