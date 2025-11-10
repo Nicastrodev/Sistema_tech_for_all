@@ -34,13 +34,26 @@ def create_app():
         name = os.getenv("DB_NAME")
 
         if user and host and name:
-            database_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}?ssl=true"
+            database_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}"
 
-    # Verificação de conexão
+    # Caminho para o certificado SSL (necessário para Aiven)
+    ssl_ca_path = os.path.join(app.root_path, "aiven_ca.pem")
+
+    # Adiciona SSL se o certificado existir
+    if os.path.exists(ssl_ca_path):
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "connect_args": {
+                "ssl": {"ca": ssl_ca_path}
+            }
+        }
+        print("🔒 SSL habilitado (Aiven CA encontrado).")
+    else:
+        print("⚠️ Certificado SSL (aiven_ca.pem) não encontrado. Conexão pode falhar no Aiven.")
+
+    # Verificação e exibição segura do URL
     if not database_url:
         print("❌ ERRO: Nenhuma URL de banco encontrada. Configure DATABASE_URL no Render.")
     else:
-        # Oculta senha nos logs
         safe_url = database_url
         if "@" in safe_url:
             left, right = safe_url.split("@", 1)
@@ -53,6 +66,7 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "default_secret")
 
+    # Inicializa banco
     db.init_app(app)
 
     # =====================================================
@@ -118,6 +132,9 @@ def create_app():
     return app
 
 
+# =====================================================
+# EXECUÇÃO DIRETA
+# =====================================================
 if __name__ == "__main__":
     app = create_app()
     with app.app_context():
