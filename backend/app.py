@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 from flask import Flask, send_from_directory, redirect, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -19,14 +20,36 @@ def create_app():
     # =====================================================
     app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "uploads")
 
-    # Banco de dados
-    user = os.getenv("DB_USER")
-    password = os.getenv("DB_PASS")
-    host = os.getenv("DB_HOST")
-    port = os.getenv("DB_PORT", "3306")
-    name = os.getenv("DB_NAME")
+    # =====================================================
+    # BANCO DE DADOS (Aiven / Render)
+    # =====================================================
+    database_url = os.getenv("DATABASE_URL")
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}"
+    if not database_url:
+        # Monta manualmente caso use DB_* variáveis
+        user = os.getenv("DB_USER")
+        password = urllib.parse.quote_plus(os.getenv("DB_PASS", ""))
+        host = os.getenv("DB_HOST")
+        port = os.getenv("DB_PORT", "3306")
+        name = os.getenv("DB_NAME")
+
+        if user and host and name:
+            database_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}?ssl=true"
+
+    # Verificação de conexão
+    if not database_url:
+        print("❌ ERRO: Nenhuma URL de banco encontrada. Configure DATABASE_URL no Render.")
+    else:
+        # Oculta senha nos logs
+        safe_url = database_url
+        if "@" in safe_url:
+            left, right = safe_url.split("@", 1)
+            if ":" in left:
+                u, _ = left.split(":", 1)
+                safe_url = f"{u}:****@{right}"
+        print(f"✅ DATABASE_URL detectada: {safe_url}")
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "default_secret")
 
@@ -43,15 +66,12 @@ def create_app():
     # =====================================================
     @app.route("/api/turmas/entrar", methods=["POST"])
     def entrar_turma():
-        """Permite que um aluno entre em uma turma usando o código."""
         from models import Turma, TurmaAluno
-
         user_id = request.headers.get("X-User-Id")
         role = request.headers.get("X-User-Role")
         data = request.get_json() or {}
         codigo = data.get("codigo_acesso")
 
-        # 🔒 Verificação de autenticação
         if not user_id or not role:
             return jsonify({"success": False, "message": "Usuário não autenticado."}), 403
 
@@ -65,13 +85,11 @@ def create_app():
         if not turma:
             return jsonify({"success": False, "message": "Código de turma inválido."}), 404
 
-        # Verifica se o aluno já está na turma
         ja_existe = TurmaAluno.query.filter_by(
             aluno_id=user_id, turma_id=turma.id).first()
         if ja_existe:
             return jsonify({"success": False, "message": "Você já está nesta turma."}), 400
 
-        # Cria o vínculo aluno-turma
         nova_relacao = TurmaAluno(aluno_id=user_id, turma_id=turma.id)
         db.session.add(nova_relacao)
         db.session.commit()
@@ -83,83 +101,16 @@ def create_app():
         }), 200
 
     # =====================================================
-    # ROTAS DO FRONTEND (HTML)
+    # ROTAS DO FRONTEND
     # =====================================================
     @app.route("/")
     def serve_index():
         return send_from_directory(app.static_folder, "index.html")
 
-    @app.route("/dashboard/teacher")
-    def serve_dashboard_teacher():
-        return send_from_directory(app.static_folder, "dashboard_teacher.html")
-
-    @app.route("/dashboard/student")
-    def serve_dashboard_student():
-        return send_from_directory(app.static_folder, "dashboard_student.html")
-
-    @app.route("/create_class")
-    def serve_create_class():
-        return send_from_directory(app.static_folder, "create_class.html")
-
-    @app.route("/diary")
-    def serve_diary():
-        return send_from_directory(app.static_folder, "diary.html")
-
-    @app.route("/activities/teacher")
-    def serve_activities_teacher():
-        return send_from_directory(app.static_folder, "activities_teacher.html")
-
-    @app.route("/activities/student")
-    @app.route("/activities_student")
-    def serve_activities_student():
-        return send_from_directory(app.static_folder, "activities_student.html")
-
-    @app.route("/lessons")
-    def serve_lessons():
-        return send_from_directory(app.static_folder, "lessons.html")
-
-    @app.route("/grades")
-    def serve_grades():
-        return send_from_directory(app.static_folder, "grades.html")
-
-    @app.route("/reports")
-    def serve_reports():
-        return send_from_directory(app.static_folder, "reports.html")
-
-    @app.route("/chat")
-    def serve_chat():
-        return send_from_directory(app.static_folder, "chat.html")
-
-    @app.route("/turma")
-    def serve_turma():
-        return send_from_directory(app.static_folder, "turma.html")
-
-    # =====================================================
-    # REDIRECIONAMENTOS AUTOMÁTICOS (.html → rota correta)
-    # =====================================================
     @app.route("/<page>.html")
     def redirect_html(page):
-        """Redireciona URLs com .html para a rota correta."""
         return redirect(f"/{page}")
 
-    @app.route("/dashboard_teacher.html")
-    def redirect_dashboard_teacher():
-        return redirect("/dashboard/teacher")
-
-    @app.route("/dashboard_student.html")
-    def redirect_dashboard_student():
-        return redirect("/dashboard/student")
-
-    # =====================================================
-    # SERVIR ARQUIVOS ESTÁTICOS (CSS, JS, imagens etc.)
-    # =====================================================
-    @app.route("/<path:filename>")
-    def serve_static_files(filename):
-        return send_from_directory(app.static_folder, filename)
-
-    # =====================================================
-    # HEALTHCHECK
-    # =====================================================
     @app.route("/health")
     def health():
         return {"status": "ok"}
@@ -167,20 +118,15 @@ def create_app():
     return app
 
 
-# =====================================================
-# EXECUÇÃO DIRETA
-# =====================================================
-
 if __name__ == "__main__":
     app = create_app()
-
-    # Cria as tabelas se ainda não existirem
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+            print("✅ Tabelas criadas/verificadas com sucesso.")
+        except Exception as e:
+            print(f"❌ Erro ao criar tabelas: {e}")
 
-    # Render define automaticamente a variável PORT (ex: 10000)
-    # usa 5050 localmente, variável no Render
     port = int(os.environ.get("PORT", 5050))
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
-
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
