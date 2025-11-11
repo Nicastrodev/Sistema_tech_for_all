@@ -133,18 +133,22 @@ def create_app():
 
 
 # =====================================================
-# EXECUÇÃO DIRETA
+# EXECUÇÃO DIRETA (LOCAL E RENDER)
 # =====================================================
-with app.app_context():
-    try:
-        # ⚙️ Importa todos os models explicitamente antes de criar as tabelas
-        from models import User, Turma, TurmaAluno, AlunoTurma, Atividade, Resposta
+if __name__ == "__main__":
+    # Cria a instância principal da aplicação
+    app = create_app()
 
-        db.create_all()
-        print("✅ Tabelas criadas/verificadas com sucesso no Aiven.")
-    except Exception as e:
-        print(f"❌ Erro ao criar tabelas: {e}")
+    # Cria as tabelas no banco, se ainda não existirem
+    with app.app_context():
+        try:
+            from models import User, Turma, TurmaAluno, AlunoTurma, Atividade, Resposta
+            db.create_all()
+            print("✅ Tabelas criadas/verificadas com sucesso no Aiven.")
+        except Exception as e:
+            print(f"❌ Erro ao criar tabelas: {e}")
 
+    # Porta automática no Render / 5050 localmente
     port = int(os.environ.get("PORT", 5050))
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
