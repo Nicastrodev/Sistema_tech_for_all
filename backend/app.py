@@ -34,26 +34,12 @@ def create_app():
         name = os.getenv("DB_NAME")
 
         if user and host and name:
-            database_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}"
+            database_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}?ssl=true"
 
-    # Caminho para o certificado SSL (necessário para Aiven)
-    ssl_ca_path = os.path.join(app.root_path, "aiven_ca.pem")
-
-    # Adiciona SSL se o certificado existir
-    if os.path.exists(ssl_ca_path):
-        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-            "connect_args": {
-                "ssl": {"ca": ssl_ca_path}
-            }
-        }
-        print("🔒 SSL habilitado (Aiven CA encontrado).")
-    else:
-        print("⚠️ Certificado SSL (aiven_ca.pem) não encontrado. Conexão pode falhar no Aiven.")
-
-    # Verificação e exibição segura do URL
     if not database_url:
         print("❌ ERRO: Nenhuma URL de banco encontrada. Configure DATABASE_URL no Render.")
     else:
+        # Oculta a senha no log
         safe_url = database_url
         if "@" in safe_url:
             left, right = safe_url.split("@", 1)
@@ -66,7 +52,6 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "default_secret")
 
-    # Inicializa banco
     db.init_app(app)
 
     # =====================================================
@@ -115,16 +100,83 @@ def create_app():
         }), 200
 
     # =====================================================
-    # ROTAS DO FRONTEND
+    # ROTAS DO FRONTEND (HTML)
     # =====================================================
     @app.route("/")
     def serve_index():
         return send_from_directory(app.static_folder, "index.html")
 
+    @app.route("/dashboard/teacher")
+    def serve_dashboard_teacher():
+        return send_from_directory(app.static_folder, "dashboard_teacher.html")
+
+    @app.route("/dashboard/student")
+    def serve_dashboard_student():
+        return send_from_directory(app.static_folder, "dashboard_student.html")
+
+    @app.route("/create_class")
+    def serve_create_class():
+        return send_from_directory(app.static_folder, "create_class.html")
+
+    @app.route("/diary")
+    def serve_diary():
+        return send_from_directory(app.static_folder, "diary.html")
+
+    @app.route("/activities/teacher")
+    def serve_activities_teacher():
+        return send_from_directory(app.static_folder, "activities_teacher.html")
+
+    @app.route("/activities/student")
+    @app.route("/activities_student")
+    def serve_activities_student():
+        return send_from_directory(app.static_folder, "activities_student.html")
+
+    @app.route("/lessons")
+    def serve_lessons():
+        return send_from_directory(app.static_folder, "lessons.html")
+
+    @app.route("/grades")
+    def serve_grades():
+        return send_from_directory(app.static_folder, "grades.html")
+
+    @app.route("/reports")
+    def serve_reports():
+        return send_from_directory(app.static_folder, "reports.html")
+
+    @app.route("/chat")
+    def serve_chat():
+        return send_from_directory(app.static_folder, "chat.html")
+
+    @app.route("/turma")
+    def serve_turma():
+        return send_from_directory(app.static_folder, "turma.html")
+
+    # =====================================================
+    # REDIRECIONAMENTOS AUTOMÁTICOS (.html → rota correta)
+    # =====================================================
     @app.route("/<page>.html")
     def redirect_html(page):
+        """Redireciona URLs com .html para a rota correta."""
         return redirect(f"/{page}")
 
+    @app.route("/dashboard_teacher.html")
+    def redirect_dashboard_teacher():
+        return redirect("/dashboard/teacher")
+
+    @app.route("/dashboard_student.html")
+    def redirect_dashboard_student():
+        return redirect("/dashboard/student")
+
+    # =====================================================
+    # SERVIR ARQUIVOS ESTÁTICOS (CSS, JS, imagens etc.)
+    # =====================================================
+    @app.route("/<path:filename>")
+    def serve_static_files(filename):
+        return send_from_directory(app.static_folder, filename)
+
+    # =====================================================
+    # HEALTHCHECK
+    # =====================================================
     @app.route("/health")
     def health():
         return {"status": "ok"}
@@ -133,22 +185,17 @@ def create_app():
 
 
 # =====================================================
-# EXECUÇÃO DIRETA (LOCAL E RENDER)
+# EXECUÇÃO DIRETA
 # =====================================================
 if __name__ == "__main__":
-    # Cria a instância principal da aplicação
     app = create_app()
-
-    # Cria as tabelas no banco, se ainda não existirem
     with app.app_context():
         try:
-            from models import User, Turma, TurmaAluno, AlunoTurma, Atividade, Resposta
             db.create_all()
-            print("✅ Tabelas criadas/verificadas com sucesso no Aiven.")
+            print("✅ Tabelas verificadas/criadas com sucesso.")
         except Exception as e:
             print(f"❌ Erro ao criar tabelas: {e}")
 
-    # Porta automática no Render / 5050 localmente
     port = int(os.environ.get("PORT", 5050))
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
