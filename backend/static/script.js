@@ -1,6 +1,7 @@
 /* ==========================
    CONFIGURAÇÃO BASE
 ========================== */
+
 // Usa a configuração global do common.js
 const API_BASE = window.API_BASE_URL;
 

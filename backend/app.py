@@ -26,7 +26,6 @@ def create_app():
     database_url = os.getenv("DATABASE_URL")
 
     if not database_url:
-        # Monta manualmente caso use DB_* variáveis
         user = os.getenv("DB_USER")
         password = urllib.parse.quote_plus(os.getenv("DB_PASS", ""))
         host = os.getenv("DB_HOST")
@@ -156,7 +155,6 @@ def create_app():
     # =====================================================
     @app.route("/<page>.html")
     def redirect_html(page):
-        """Redireciona URLs com .html para a rota correta."""
         return redirect(f"/{page}")
 
     @app.route("/dashboard_teacher.html")

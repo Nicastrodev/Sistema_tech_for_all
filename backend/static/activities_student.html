@@ -109,7 +109,7 @@
         color: var(--muted);
       }
 
-      /* Activity list (vertical cards) */
+      /* lista de atividade (vertical cards) */
       .activity-list {
         display: flex;
         flex-direction: column;
@@ -364,8 +364,7 @@
         else alert(msg);
       }
 
-      /* Renderiza a lista de atividades em cartões verticais.
-         Mantive as chamadas e endpoints exatamente como antes. */
+      /* Renderiza a lista de atividades em cartões verticais. */
       async function loadActivities() {
         const list = document.getElementById("activityList");
         const s = getSession();

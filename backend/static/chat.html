@@ -23,7 +23,8 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        height: 80vh;
+        /* FIX MOBILE */
+        min-height: 70vh;
       }
 
       .chat-header {
@@ -51,6 +52,8 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
+        /* FIX MOBILE – espaço pro teclado */
+        padding-bottom: 90px;
       }
 
       .chat-message {
@@ -79,6 +82,11 @@
         border-top: 1px solid #eee;
         padding: 14px 16px;
         background: #fafafa;
+
+        /* FIX MOBILE – não deixar sumir */
+        position: sticky;
+        bottom: 0;
+        z-index: 50;
       }
 
       .chat-input {
@@ -181,7 +189,7 @@
         const studentName = s.name || "Aluno";
         assistantTitle.textContent = `Assistente do Aluno - ${studentName}`;
 
-        // Mensagem inicial única (sem respostas prontas)
+        // Mensagem inicial
         addMessage(
           "Assistente Tech For All",
           `Olá, ${studentName}! 👋 Sou o assistente de aprendizado da Tech For All. 
@@ -218,7 +226,6 @@ Pode me perguntar qualquer coisa sobre suas atividades, turmas ou conteúdos. �
         addMessage("Você", message, "user");
         chatInput.value = "";
 
-        // Mostra o "digitando..."
         const typingIndicator = document.createElement("div");
         typingIndicator.className = "chat-message ai-message typing";
         typingIndicator.innerHTML = `<strong>Assistente Tech For All:</strong> <em>Digitando...</em>`;

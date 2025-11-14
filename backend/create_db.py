@@ -36,10 +36,6 @@ def create_or_update_db():
         # Exemplo: nova coluna para comentário do aluno
         safe_add_column("respostas", "comentario", "TEXT")
 
-        # Exemplo: se futuramente quiser adicionar mais colunas
-        # safe_add_column("tarefas", "link", "VARCHAR(255)")
-        # safe_add_column("tarefas", "arquivo", "VARCHAR(255)")
-
         print("\n✅ Banco de dados atualizado com sucesso!")
 
 
