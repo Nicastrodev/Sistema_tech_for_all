@@ -1012,7 +1012,7 @@ def ia_chat():
 
         # Memória por aluno (últimas 5 mensagens)
         global chat_memory
-        histor = chat_memory.get(student_id, [])
+        history = chat_memory.get(student_id, [])
         history.append({"role": "user", "content": question})
         history = history[-5:]
 
