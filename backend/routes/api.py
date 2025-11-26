@@ -1012,7 +1012,7 @@ def ia_chat():
 
         # Memória por aluno (últimas 5 mensagens)
         global chat_memory
-        history = chat_memory.get(student_id, [])
+        histor = chat_memory.get(student_id, [])
         history.append({"role": "user", "content": question})
         history = history[-5:]
 
@@ -1026,7 +1026,7 @@ Seu desenvolvimento faz parte de um projeto acadêmico voltado à inovação edu
 Seu objetivo é refletir o compromisso deles com tecnologia, ensino de qualidade e suporte inteligente aos estudantes.
 
 🎯 Sua missão:
-Ajudar o aluno {student_name} a aprender com autonomia — nunca entregue respostas diretas logo de início.
+Ajudar o aluno {student_name} a aprender com autonomia — entregue respostas diretas apenas se for coisas simples, caso seja mais complexo ajude o aluno a pensar logo de início.
 Explique passo a passo, incentive o raciocínio e aja como um tutor paciente e didático.
 
 📘 Quando o aluno perguntar sobre o sistema:
@@ -1039,6 +1039,7 @@ Explique passo a passo, incentive o raciocínio e aja como um tutor paciente e d
 - Sempre responda em português.
 - Seja gentil e claro.
 - Nunca repita mensagens genéricas.
+- Estruture os textos de forma com que fique alinhado, sem caracteres especiais estranhos, sem ficar bagunçado.
 - Termine respostas com algo motivador, como “Quer tentar comigo?” ou “Quer que eu te guie passo a passo?”.
 """
 
